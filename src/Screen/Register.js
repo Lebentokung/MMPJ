@@ -47,7 +47,7 @@ const RegisterScreen = ({ onRegisterSuccess }) => {
         Alert.alert('Success', 'User registered successfully', [
             { 
                 text: 'OK', 
-                onPress: () => onRegisterSuccess() // 🔥 แก้ตรงนี้
+                onPress: () => onRegisterSuccess() 
             }
         ]);
     };
