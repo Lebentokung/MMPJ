@@ -1,20 +1,22 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useContext } from "react";
+import { View, Text, StyleSheet, FlatList } from 'react-native'
+import { UserContext } from "./context/UserContext";
 
-export default function ProfileScreen() {
-  return (
-    <View style={styles.container}>
-      <Text>Profile Screen</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+const UserListScreen = () => {
+    const { users } = useContext(UserContext)
+
+    return (
+        <View>
+            <Text>User List</Text>
+            <FlatList
+                data={users}
+            />
+        </View>
+    )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+
 });
+
+export default UserListScreen
