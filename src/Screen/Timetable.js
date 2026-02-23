@@ -32,20 +32,32 @@ export default function Timetable(){
   useEffect(()=>{ load(); }, []);
 
   async function load(){
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    setList(raw? JSON.parse(raw) : []);
-    const rawEx = await AsyncStorage.getItem(EXAMS_KEY);
-    setExams(rawEx? JSON.parse(rawEx) : []);
+    try {
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      setList(raw ? JSON.parse(raw) : []);
+      const rawEx = await AsyncStorage.getItem(EXAMS_KEY);
+      setExams(rawEx ? JSON.parse(rawEx) : []);
+    } catch (error) {
+      console.error("Failed to load timetable data:", error);
+    }
   }
 
   async function save(newList){
-    setList(newList);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
+    try {
+      setList(newList);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
+    } catch (error) {
+      console.error("Failed to save timetable data:", error);
+    }
   }
 
   async function saveExams(newList){
-    setExams(newList);
-    await AsyncStorage.setItem(EXAMS_KEY, JSON.stringify(newList));
+    try {
+      setExams(newList);
+      await AsyncStorage.setItem(EXAMS_KEY, JSON.stringify(newList));
+    } catch (error) {
+      console.error("Failed to save exam data:", error);
+    }
   }
 
   function openAdd(){

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SafeAreaView, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { UserProvider } from './src/context/Usercontext';
+import { Ionicons } from '@expo/vector-icons';
 
 import Register from './src/Screen/Register';
 import Dashboard from './src/Screen/Dashboard';
@@ -47,40 +48,42 @@ function MainApp(){
       </View>
 
       <View style={styles.tabBar}>
-        <TabButton 
-          label="Dashboard" 
-          active={tab==='Dashboard'} 
-          onPress={()=>setTab('Dashboard')} 
+        <TabButton
+          title="Dashboard"
+          iconName="home"
+          onPress={() => setTab('Dashboard')}
+          isActive={tab === 'Dashboard'}
         />
-        <TabButton 
-          label="Timetable" 
-          active={tab==='Timetable'} 
-          onPress={()=>setTab('Timetable')} 
+        <TabButton
+          title="Timetable"
+          iconName="calendar"
+          onPress={() => setTab('Timetable')}
+          isActive={tab === 'Timetable'}
         />
-        <TabButton 
-          label="Planner" 
-          active={tab==='Planner'} 
-          onPress={()=>setTab('Planner')} 
+        <TabButton
+          title="Planner"
+          iconName="clipboard"
+          onPress={() => setTab('Planner')}
+          isActive={tab === 'Planner'}
         />
-        <TabButton 
-          label="Profile" 
-          active={tab==='Profile'} 
-          onPress={()=>setTab('Profile')} 
+        <TabButton
+          title="Profile"
+          iconName="person"
+          onPress={() => setTab('Profile')}
+          isActive={tab === 'Profile'}
         />
       </View>
     </SafeAreaView>
   );
 }
 
-function TabButton({label, active, onPress}){
+function TabButton({ title, iconName, onPress, isActive }) {
   return (
-    <TouchableOpacity 
-      style={[styles.tabBtn, active && styles.tabActive]} 
-      onPress={onPress}
-    >
-      <Text style={[styles.tabText, active && styles.tabTextActive]}>
-        {label}
-      </Text>
+    <TouchableOpacity onPress={onPress} style={styles.tabButton}>
+      <View style={[styles.tabCircle, isActive && styles.activeTabCircle]}>
+        <Ionicons name={iconName} size={24} color={isActive ? 'white' : 'black'} />
+      </View>
+      <Text style={[styles.tabText, isActive && styles.activeTabText]}>{title}</Text>
     </TouchableOpacity>
   );
 }
@@ -100,7 +103,8 @@ const styles = StyleSheet.create({
     borderColor:'#eee',
     backgroundColor:'#f7eaf3',
     alignItems:'center',
-    justifyContent:'space-around'
+    justifyContent:'space-around',
+    marginBottom: 20, // Adjusted to move the tab bar higher
   },
   tabBtn:{
     flex:1,
@@ -119,5 +123,27 @@ const styles = StyleSheet.create({
   tabTextActive:{
     fontWeight:'700',
     color:'#3b1730'
+  },
+  tabButton:{
+    alignItems:'center',
+  },
+  tabCircle:{
+    width:60,
+    height:60,
+    borderRadius:50,
+    backgroundColor:'#e0e0e0',
+    justifyContent:'center',
+    alignItems:'center',
+  },
+  activeTabCircle:{
+    backgroundColor:'#6200ee',
+  },
+  tabText:{
+    marginTop:5,
+    fontSize:12,
+    color:'black',
+  },
+  activeTabText:{
+    color:'#6200ee',
   }
 });
