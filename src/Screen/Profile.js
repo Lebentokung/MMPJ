@@ -1,9 +1,9 @@
 import React, { useContext } from "react";
 import { View, Text, StyleSheet, FlatList } from 'react-native'
-import { UserContext } from "./context/UserContext";
+import { Usercontext } from "../context/Usercontext";
 
 const UserListScreen = () => {
-    const { users } = useContext(UserContext)
+    const { users } = useContext(Usercontext)
 
     return (
         <View>
