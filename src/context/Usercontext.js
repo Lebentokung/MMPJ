@@ -5,19 +5,24 @@ export const Usercontext = createContext()
 const userReducer = (state, action) => {
     switch(action.type){
         case 'ADD_USER':
-            return [action.payload, ...state];
+            return { ...state, users: [action.payload, ...state.users] };
         default:
             return state;
     }
 }
 
-// Testdwadad dffawfawfa
-
 export const UserProvider = ({children}) => {
-    const [userState, dispatch] = useReducer (userReducer, []);
+    const initialState = {
+        users: [],
+        timetable: [],
+        exams: [],
+        activities: [],
+    };
+
+    const [userState, dispatch] = useReducer(userReducer, initialState);
 
     return (
-        <Usercontext.Provider value={{userState, dispatch}}>
+        <Usercontext.Provider value={{state: userState, dispatch}}>
             {children}
         </Usercontext.Provider>
     )
