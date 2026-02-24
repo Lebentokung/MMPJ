@@ -17,9 +17,8 @@ export default function Timetable(){
   const [start, setStart] = useState('09:00');
   const [end, setEnd] = useState('10:00');
 
-  const [viewMode, setViewMode] = useState('classes'); // 'classes' or 'exams'
+  const [viewMode, setViewMode] = useState('classes');
 
-  // exams
   const [exams, setExams] = useState([]);
   const [examModalVisible, setExamModalVisible] = useState(false);
   const [examTitle, setExamTitle] = useState('');
@@ -60,8 +59,33 @@ export default function Timetable(){
     setModalVisible(true);
   }
 
+  function timeToMinutes(time) {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  function hasTimeConflict(dayStr, startTime, endTime, excludeId = null) {
+    const startMin = timeToMinutes(startTime);
+    const endMin = timeToMinutes(endTime);
+    
+    return list.some(item => {
+      if (item.day !== dayStr) return false;
+      if (excludeId && item.id === excludeId) return false;
+      
+      const itemStartMin = timeToMinutes(item.start);
+      const itemEndMin = timeToMinutes(item.end);
+      
+      return !(endMin <= itemStartMin || startMin >= itemEndMin);
+    });
+  }
+
   function addClass(){
     if (!name.trim()) return Alert.alert('Please add a subject name');
+    
+    if (hasTimeConflict(day, start, end, editingId)) {
+      return Alert.alert('Time Conflict', 'This time slot overlaps with another class on ' + day);
+    }
+    
     if (editingId){
       const newList = list.map(it=> it.id===editingId ? {...it, name, code, room, day, start, end} : it);
       save(newList);
@@ -85,8 +109,29 @@ export default function Timetable(){
     setExamModalVisible(true);
   }
 
+  function hasExamTimeConflict(dateStr, startTime, endTime, excludeId = null) {
+    const startMin = timeToMinutes(startTime);
+    const endMin = timeToMinutes(endTime);
+    
+    return exams.some(item => {
+      if (item.date !== dateStr) return false;
+      if (excludeId && item.id === excludeId) return false;
+      
+      const itemStartMin = timeToMinutes(item.start);
+      const itemEndMin = timeToMinutes(item.end);
+      
+      // Check if times overlap
+      return !(endMin <= itemStartMin || startMin >= itemEndMin);
+    });
+  }
+
   function addExam(){
     if (!examTitle.trim()) return Alert.alert('Please add an exam title');
+
+    if (hasExamTimeConflict(examDate, examStart, examEnd, editingExamId)) {
+      return Alert.alert('Time Conflict', 'This exam time overlaps with another exam on ' + examDate);
+    }
+    
     if (editingExamId){
       const newList = exams.map(it=> it.id===editingExamId ? {...it, title: examTitle, date: examDate, start: examStart, end: examEnd, location: examLocation} : it);
       saveExams(newList);
@@ -106,7 +151,16 @@ export default function Timetable(){
     Alert.alert('Delete','Remove this exam?', [{text:'Cancel'},{text:'OK', onPress: ()=> saveExams(exams.filter(i=>i.id!==id))}]);
   }
 
-  const days = ['Mon','Tue','Wed','Thu','Fri'];
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dayNames = {
+    'Mon': 'Monday',
+    'Tue': 'Tuesday',
+    'Wed': 'Wednesday',
+    'Thu': 'Thursday',
+    'Fri': 'Friday',
+    'Sat': 'Saturday',
+    'Sun': 'Sunday'
+  };
 
   return (
     <View style={styles.container}>
@@ -125,7 +179,7 @@ export default function Timetable(){
               const items = list.filter(i=>i.day===item);
               return (
                 <View style={styles.dayBlock}>
-                  <Text style={styles.dayTitle}>{item}</Text>
+                  <Text style={styles.dayTitle}>{dayNames[item]}</Text>
                   {items.length===0 ? <Text style={{opacity:0.6}}>No classes</Text> : items.map(it=> (
                     <View key={it.id} style={styles.classRow}>
                       <View>
@@ -149,7 +203,7 @@ export default function Timetable(){
               const items = exams.filter(ex=> ex.date === item);
               return (
                 <View style={styles.dayBlock}>
-                  <Text style={styles.dayTitle}>{item}</Text>
+                  <Text style={styles.dayTitle}>{dayNames[item]}</Text>
                   {items.length===0 ? <Text style={{opacity:0.6}}>No exams</Text> : items.map(it=> (
                     <View key={it.id} style={styles.classRow}>
                       <View>
@@ -187,11 +241,13 @@ export default function Timetable(){
 
             <View style={{borderWidth:1, borderColor:'#eee', borderRadius:6, overflow:'hidden', marginVertical:6}}>
               <Picker selectedValue={day} onValueChange={v=>setDay(v)}>
-                <Picker.Item label="Mon" value="Mon" />
-                <Picker.Item label="Tue" value="Tue" />
-                <Picker.Item label="Wed" value="Wed" />
-                <Picker.Item label="Thu" value="Thu" />
-                <Picker.Item label="Fri" value="Fri" />
+                <Picker.Item label="Monday" value="Mon" />
+                <Picker.Item label="Tuesday" value="Tue" />
+                <Picker.Item label="Wednesday" value="Wed" />
+                <Picker.Item label="Thursday" value="Thu" />
+                <Picker.Item label="Friday" value="Fri" />
+                <Picker.Item label="Saturday" value="Sat" />
+                <Picker.Item label="Sunday" value="Sun" />
               </Picker>
             </View>
 
@@ -225,11 +281,13 @@ export default function Timetable(){
 
             <View style={{borderWidth:1, borderColor:'#eee', borderRadius:6, overflow:'hidden', marginVertical:6}}>
               <Picker selectedValue={examDate} onValueChange={v=>setExamDate(v)}>
-                <Picker.Item label="Mon" value="Mon" />
-                <Picker.Item label="Tue" value="Tue" />
-                <Picker.Item label="Wed" value="Wed" />
-                <Picker.Item label="Thu" value="Thu" />
-                <Picker.Item label="Fri" value="Fri" />
+                <Picker.Item label="Monday" value="Mon" />
+                <Picker.Item label="Tuesday" value="Tue" />
+                <Picker.Item label="Wednesday" value="Wed" />
+                <Picker.Item label="Thursday" value="Thu" />
+                <Picker.Item label="Friday" value="Fri" />
+                <Picker.Item label="Saturday" value="Sat" />
+                <Picker.Item label="Sunday" value="Sun" />
               </Picker>
             </View>
 
