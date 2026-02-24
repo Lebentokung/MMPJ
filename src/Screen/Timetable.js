@@ -14,6 +14,8 @@ export default function Timetable(){
   const [code, setCode] = useState('');
   const [room, setRoom] = useState('');
   const [day, setDay] = useState('Mon');
+  const [classDate, setClassDate] = useState('');
+  const [classMonth, setClassMonth] = useState('');
   const [start, setStart] = useState('09:00');
   const [end, setEnd] = useState('10:00');
 
@@ -23,6 +25,8 @@ export default function Timetable(){
   const [examModalVisible, setExamModalVisible] = useState(false);
   const [examTitle, setExamTitle] = useState('');
   const [examDate, setExamDate] = useState('Mon');
+  const [examDayOfMonth, setExamDayOfMonth] = useState('');
+  const [examMonth, setExamMonth] = useState('');
   const [examStart, setExamStart] = useState('09:00');
   const [examEnd, setExamEnd] = useState('10:00');
   const [examLocation, setExamLocation] = useState('');
@@ -49,13 +53,13 @@ export default function Timetable(){
 
   function openAdd(){
     setEditingId(null);
-    setName(''); setCode(''); setRoom(''); setDay('Mon'); setStart('09:00'); setEnd('10:00');
+    setName(''); setCode(''); setRoom(''); setDay('Mon'); setClassDate(''); setClassMonth(''); setStart('09:00'); setEnd('10:00');
     setModalVisible(true);
   }
 
   function openEdit(item){
     setEditingId(item.id);
-    setName(item.name||''); setCode(item.code||''); setRoom(item.room||''); setDay(item.day||'Mon'); setStart(item.start||'09:00'); setEnd(item.end||'10:00');
+    setName(item.name||''); setCode(item.code||''); setRoom(item.room||''); setDay(item.day||'Mon'); setClassDate(item.classDate||''); setClassMonth(item.classMonth||''); setStart(item.start||'09:00'); setEnd(item.end||'10:00');
     setModalVisible(true);
   }
 
@@ -87,11 +91,11 @@ export default function Timetable(){
     }
     
     if (editingId){
-      const newList = list.map(it=> it.id===editingId ? {...it, name, code, room, day, start, end} : it);
+      const newList = list.map(it=> it.id===editingId ? {...it, name, code, room, day, classDate, classMonth, start, end} : it);
       save(newList);
       setEditingId(null);
     } else {
-      const item = {id: Date.now().toString(), name, code, room, day, start, end};
+      const item = {id: Date.now().toString(), name, code, room, day, classDate, classMonth, start, end};
       save([item, ...list]);
     }
     setModalVisible(false);
@@ -99,22 +103,34 @@ export default function Timetable(){
 
   function openAddExam(){
     setEditingExamId(null);
-    setExamTitle(''); setExamDate('Mon'); setExamStart('09:00'); setExamEnd('10:00'); setExamLocation('');
+    setExamTitle(''); setExamDate('Mon'); setExamDayOfMonth(''); setExamMonth(''); setExamStart('09:00'); setExamEnd('10:00'); setExamLocation('');
     setExamModalVisible(true);
   }
 
   function openEditExam(ex){
     setEditingExamId(ex.id);
-    setExamTitle(ex.title||''); setExamDate(ex.date||'Mon'); setExamStart(ex.start||'09:00'); setExamEnd(ex.end||'10:00'); setExamLocation(ex.location||'');
+    setExamTitle(ex.title||''); setExamDate(ex.date||'Mon'); setExamDayOfMonth(ex.examDayOfMonth||''); setExamMonth(ex.examMonth||''); setExamStart(ex.start||'09:00'); setExamEnd(ex.end||'10:00'); setExamLocation(ex.location||'');
     setExamModalVisible(true);
   }
 
-  function hasExamTimeConflict(dateStr, startTime, endTime, excludeId = null) {
+  function hasExamTimeConflict(dateStr, dayOfMonth, month, startTime, endTime, excludeId = null) {
     const startMin = timeToMinutes(startTime);
     const endMin = timeToMinutes(endTime);
     
     return exams.some(item => {
-      if (item.date !== dateStr) return false;
+      const isSameDate =
+        item.date === dateStr &&
+        (item.examDayOfMonth || '') === dayOfMonth &&
+        (item.examMonth || '') === month;
+
+      const isLegacySameDate =
+        item.date === dateStr &&
+        !item.examDayOfMonth &&
+        !item.examMonth &&
+        !dayOfMonth &&
+        !month;
+
+      if (!isSameDate && !isLegacySameDate) return false;
       if (excludeId && item.id === excludeId) return false;
       
       const itemStartMin = timeToMinutes(item.start);
@@ -128,16 +144,16 @@ export default function Timetable(){
   function addExam(){
     if (!examTitle.trim()) return Alert.alert('Please add an exam title');
 
-    if (hasExamTimeConflict(examDate, examStart, examEnd, editingExamId)) {
+    if (hasExamTimeConflict(examDate, examDayOfMonth, examMonth, examStart, examEnd, editingExamId)) {
       return Alert.alert('Time Conflict', 'This exam time overlaps with another exam on ' + examDate);
     }
     
     if (editingExamId){
-      const newList = exams.map(it=> it.id===editingExamId ? {...it, title: examTitle, date: examDate, start: examStart, end: examEnd, location: examLocation} : it);
+      const newList = exams.map(it=> it.id===editingExamId ? {...it, title: examTitle, date: examDate, examDayOfMonth, examMonth, start: examStart, end: examEnd, location: examLocation} : it);
       saveExams(newList);
       setEditingExamId(null);
     } else {
-      const item = {id: Date.now().toString(), title: examTitle, date: examDate, start: examStart, end: examEnd, location: examLocation};
+      const item = {id: Date.now().toString(), title: examTitle, date: examDate, examDayOfMonth, examMonth, start: examStart, end: examEnd, location: examLocation};
       saveExams([item, ...exams]);
     }
     setExamModalVisible(false);
@@ -184,6 +200,7 @@ export default function Timetable(){
                     <View key={it.id} style={styles.classRow}>
                       <View>
                         <Text style={{fontWeight:'600'}}>{it.name} ({it.code})</Text>
+                        {(it.classDate || it.classMonth) ? <Text>{it.classDate || '-'} / {it.classMonth || '-'}</Text> : null}
                         <Text>{it.start} - {it.end} • {it.room}</Text>
                       </View>
                       <View style={{flexDirection:'row', alignItems:'center'}}>
@@ -208,6 +225,7 @@ export default function Timetable(){
                     <View key={it.id} style={styles.classRow}>
                       <View>
                         <Text style={{fontWeight:'600'}}>{it.title}</Text>
+                        {(it.examDayOfMonth || it.examMonth) ? <Text>{it.examDayOfMonth || '-'} / {it.examMonth || '-'}</Text> : null}
                         <Text>{it.start} - {it.end} • {it.location}</Text>
                       </View>
                       <View style={{flexDirection:'row', alignItems:'center'}}>
@@ -252,6 +270,22 @@ export default function Timetable(){
             </View>
 
             <View style={{flexDirection:'row', justifyContent:'space-between'}}>
+              <TextInput
+                placeholder="Date (1-31)"
+                value={classDate}
+                onChangeText={setClassDate}
+                keyboardType="number-pad"
+                style={[styles.input,{flex:1, marginRight:6}]}
+              />
+              <TextInput
+                placeholder="Month"
+                value={classMonth}
+                onChangeText={setClassMonth}
+                style={[styles.input,{flex:1}]}
+              />
+            </View>
+
+            <View style={{flexDirection:'row', justifyContent:'space-between'}}>
               <TextInput value={start} onChangeText={setStart} style={[styles.input,{flex:1, marginRight:6}]} />
               <TextInput value={end} onChangeText={setEnd} style={[styles.input,{flex:1}]} />
             </View>
@@ -289,6 +323,22 @@ export default function Timetable(){
                 <Picker.Item label="Saturday" value="Sat" />
                 <Picker.Item label="Sunday" value="Sun" />
               </Picker>
+            </View>
+
+            <View style={{flexDirection:'row', justifyContent:'space-between'}}>
+              <TextInput
+                placeholder="Date (1-31)"
+                value={examDayOfMonth}
+                onChangeText={setExamDayOfMonth}
+                keyboardType="number-pad"
+                style={[styles.input,{flex:1, marginRight:6}]}
+              />
+              <TextInput
+                placeholder="Month"
+                value={examMonth}
+                onChangeText={setExamMonth}
+                style={[styles.input,{flex:1}]}
+              />
             </View>
 
             <View style={{flexDirection:'row', justifyContent:'space-between'}}>
