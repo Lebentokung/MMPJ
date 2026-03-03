@@ -5,9 +5,8 @@ import { Usercontext } from '../context/Usercontext';
 import { StatusBar } from 'react-native';
 
 export default function PlannerScreen() {
-  const { timetable, exams, saveTimetable, saveExams } = useContext(Usercontext);
-    // use timetable from context directly; removes need to sync local state
-    const activities = timetable || [];
+  const { plannerActivities, studyPlans, savePlannerActivities, saveStudyPlans } = useContext(Usercontext);
+    const activities = plannerActivities || [];
     const [modalVisible, setModalVisible] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [name, setName] = useState('');
@@ -32,13 +31,13 @@ export default function PlannerScreen() {
   };
 
   // study plan state
-  const [plans, setPlans] = useState([]);
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState(null);
   const [subject, setSubject] = useState('');
   const [topic, setTopic] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
+  const plans = studyPlans || [];
 
   function addPlan() {
     if (!subject || !topic || !date || !time) {
@@ -48,7 +47,7 @@ export default function PlannerScreen() {
 
     if (editingPlanId) {
       // update existing plan
-      setPlans(plans.map(p => p.id === editingPlanId ? { ...p, subject, topic, date, time } : p));
+      saveStudyPlans(plans.map(p => p.id === editingPlanId ? { ...p, subject, topic, date, time } : p));
       setEditingPlanId(null);
     } else {
       const newPlan = {
@@ -58,7 +57,7 @@ export default function PlannerScreen() {
         date,
         time,
       };
-      setPlans([...plans, newPlan]);
+      saveStudyPlans([...plans, newPlan]);
     }
 
     setSubject('');
@@ -69,7 +68,7 @@ export default function PlannerScreen() {
   }
 
   function deletePlan(id) {
-    setPlans(plans.filter(item => item.id !== id));
+    saveStudyPlans(plans.filter(item => item.id !== id));
   }
 
   function openEditPlan(plan) {
@@ -120,19 +119,18 @@ export default function PlannerScreen() {
       if (!name.trim()) return Alert.alert('Please add an activity name');
       
       const hasClassConflict = hasTimeConflict(day, start, end, editingId);
-      const hasActivityConflict = hasClassOverlapWithActivities(day, start, end);
   
-      if (hasClassConflict || hasActivityConflict) {
+      if (hasClassConflict) {
         return Alert.alert('เวลาใช้งานซ้ำ', 'เวลานี้ทับกับกิจกรรมที่มีอยู่แล้ว กรุณาเลือกเวลาใหม่');
       }
       
       if (editingId){
         const newList = activities.map(it=> it.id===editingId ? {...it, name,  room, day, classDate, classMonth, start, end} : it);
-        saveTimetable(newList);
+        savePlannerActivities(newList);
         setEditingId(null);
       } else {
         const item = {id: Date.now().toString(), name,  room, day, classDate, classMonth, start, end};
-        saveTimetable([item, ...activities]);
+        savePlannerActivities([item, ...activities]);
       }
       setModalVisible(false);
     }
@@ -148,11 +146,7 @@ export default function PlannerScreen() {
         text:'OK',
         onPress: ()=> {
           const filteredClasses = activities.filter(i => i.id !== classItem.id);
-          const filteredExams = exams.filter(ex => !isExamLinkedToClass(ex, classItem));
-          saveTimetable(filteredClasses);
-          if (filteredExams.length !== exams.length) {
-            saveExams(filteredExams);
-          }
+          savePlannerActivities(filteredClasses);
         }
       }]);
     }
@@ -175,20 +169,6 @@ export default function PlannerScreen() {
   function timeToMinutes(time) {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
-  }
-
-  function hasClassOverlapWithActivities(dayStr, startTime, endTime, excludeExamId = null) {
-    const startMin = timeToMinutes(startTime);
-    const endMin = timeToMinutes(endTime);
-
-    return exams.some(item => {
-      if (item.date !== dayStr) return false;
-      if (excludeExamId && item.id === excludeExamId) return false;
-
-      const itemStartMin = timeToMinutes(item.start);
-      const itemEndMin = timeToMinutes(item.end);
-      return !(endMin <= itemStartMin || startMin >= itemEndMin);
-    });
   }
 
   return (
