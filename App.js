@@ -22,6 +22,7 @@ function MainApp(){
 
   const [isAuth, setIsAuth] = useState(false);
   const [tab, setTab] = useState('Profile');
+  const [plannerAddRequest, setPlannerAddRequest] = useState(false);
 
   // if(!isAuth){
   //   return (
@@ -31,20 +32,23 @@ function MainApp(){
   //   );
   // }
 
-  function renderScreen(){
-    switch(tab){
-      case 'Dashboard': return <Dashboard />;
-      case 'Timetable': return <Timetable />;
-      case 'Planner': return <Planner />;
-      case 'Profile': return <Profile />;
-      default: return <Dashboard />;
-    }
-  }
+  const triggerPlannerAdd = () => {
+    setTab('Planner');
+    setPlannerAddRequest(true);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        {renderScreen()}
+        {tab === 'Dashboard' && <Dashboard onPlannerQuickAdd={triggerPlannerAdd} />}
+        {tab === 'Timetable' && <Timetable />}
+        {tab === 'Planner' && (
+          <Planner
+            plannerAddRequest={plannerAddRequest}
+            clearPlannerAddRequest={() => setPlannerAddRequest(false)}
+          />
+        )}
+        {tab === 'Profile' && <Profile />}
       </View>
 
        <View style={styles.tabBar}>

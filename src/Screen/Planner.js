@@ -4,7 +4,7 @@ import { Picker } from '@react-native-picker/picker';
 import { Usercontext } from '../context/Usercontext';
 import { StatusBar } from 'react-native';
 
-export default function PlannerScreen() {
+export default function PlannerScreen({ plannerAddRequest, clearPlannerAddRequest }) {
   const { plannerActivities, studyPlans, savePlannerActivities, saveStudyPlans } = useContext(Usercontext);
     const activities = plannerActivities || [];
     const [modalVisible, setModalVisible] = useState(false);
@@ -114,6 +114,14 @@ export default function PlannerScreen() {
     setName(''); setRoom(''); setDay('Mon'); setClassDate(''); setClassMonth(''); setStart('09:00'); setEnd('10:00');
     setModalVisible(true);
   }
+
+  // if parent requests an add, show modal once then clear
+  React.useEffect(() => {
+    if (plannerAddRequest) {
+      openAdd();
+      clearPlannerAddRequest();
+    }
+  }, [plannerAddRequest]);
 
   function addActivity(){
       if (!name.trim()) return Alert.alert('Please add an activity name');
