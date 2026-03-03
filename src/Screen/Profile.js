@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import {
     View,
     Text,
@@ -12,9 +12,11 @@ import {
     Pressable
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Usercontext } from "../context/Usercontext";
 
 
 const ProfileScreen = () => {
+    const { resetAppData } = useContext(Usercontext);
     const [studentId, setStudentId] = useState("");
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -40,12 +42,13 @@ const ProfileScreen = () => {
                 {
                     text: "ยืนยัน",
                     style: "destructive",
-                    onPress: () => {
+                    onPress: async () => {
                         setStudentId("");
                         setName("");
                         setEmail("");
                         setYear("");
                         setFaculty("");
+                        await resetAppData();
                         Alert.alert("ลบข้อมูลเรียบร้อย");
                     },
                 },
@@ -104,6 +107,13 @@ const ProfileScreen = () => {
                     onChangeText={setFaculty}
                     editable={false}
                 />
+
+                {!studentId && !name && !email && !year && !faculty ? (
+                    <View style={styles.emptyCard}>
+                        <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
+                        <Text style={styles.emptySub}>Empty profile data</Text>
+                    </View>
+                ) : null}
 
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity
@@ -230,6 +240,9 @@ const styles = StyleSheet.create({
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
     modalContent: { backgroundColor: '#fff', padding: 16, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
     modalBtn: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center', marginHorizontal: 6 }
+    , emptyCard: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ead7e3', borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 10, width: '80%', alignSelf: 'center' }
+    , emptyTitle: { fontSize: 16, fontWeight: '700', color: '#6b3550' }
+    , emptySub: { marginTop: 4, color: '#8d7f87' }
     , segControl: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', marginVertical: 8 }
     , segBtn: { flex: 1, padding: 10, alignItems: 'center' }
     , segActive: { backgroundColor: '#f2d7ec' }

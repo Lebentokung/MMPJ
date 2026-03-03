@@ -1,13 +1,11 @@
-import React, {useEffect, useState} from 'react';
-import {View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Modal, Pressable, Platform} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, {useContext, useState} from 'react';
+import {View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Modal, Pressable} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-
-const STORAGE_KEY = 'timetable';
-const EXAMS_KEY = 'exams';
+import { Usercontext } from '../context/Usercontext';
 
 export default function Timetable(){
-  const [list, setList] = useState([]);
+  const { timetable, exams, saveTimetable, saveExams } = useContext(Usercontext);
+  const [list, setList] = useState(timetable);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [name, setName] = useState('');
@@ -21,7 +19,6 @@ export default function Timetable(){
 
   const [viewMode, setViewMode] = useState('classes');
 
-  const [exams, setExams] = useState([]);
   const [examModalVisible, setExamModalVisible] = useState(false);
   const [examTitle, setExamTitle] = useState('');
   const [examDate, setExamDate] = useState('Mon');
@@ -30,26 +27,12 @@ export default function Timetable(){
   const [examStart, setExamStart] = useState('09:00');
   const [examEnd, setExamEnd] = useState('10:00');
   const [examLocation, setExamLocation] = useState('');
+  const [examSubjectId, setExamSubjectId] = useState('');
   const [editingExamId, setEditingExamId] = useState(null);
 
-  useEffect(()=>{ load(); }, []);
-
-  async function load(){
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    setList(raw? JSON.parse(raw) : []);
-    const rawEx = await AsyncStorage.getItem(EXAMS_KEY);
-    setExams(rawEx? JSON.parse(rawEx) : []);
-  }
-
-  async function save(newList){
-    setList(newList);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
-  }
-
-  async function saveExams(newList){
-    setExams(newList);
-    await AsyncStorage.setItem(EXAMS_KEY, JSON.stringify(newList));
-  }
+  React.useEffect(() => {
+    setList(timetable);
+  }, [timetable]);
 
   function openAdd(){
     setEditingId(null);
@@ -83,33 +66,51 @@ export default function Timetable(){
     });
   }
 
+  function hasClassOverlapWithActivities(dayStr, startTime, endTime, excludeExamId = null) {
+    const startMin = timeToMinutes(startTime);
+    const endMin = timeToMinutes(endTime);
+
+    return exams.some(item => {
+      if (item.date !== dayStr) return false;
+      if (excludeExamId && item.id === excludeExamId) return false;
+
+      const itemStartMin = timeToMinutes(item.start);
+      const itemEndMin = timeToMinutes(item.end);
+      return !(endMin <= itemStartMin || startMin >= itemEndMin);
+    });
+  }
+
   function addClass(){
     if (!name.trim()) return Alert.alert('Please add a subject name');
     
-    if (hasTimeConflict(day, start, end, editingId)) {
-      return Alert.alert('Time Conflict', 'This time slot overlaps with another class on ' + day);
+    const hasClassConflict = hasTimeConflict(day, start, end, editingId);
+    const hasActivityConflict = hasClassOverlapWithActivities(day, start, end);
+
+    if (hasClassConflict || hasActivityConflict) {
+      return Alert.alert('เวลาใช้งานซ้ำ', 'เวลานี้ทับกับกิจกรรมที่มีอยู่แล้ว กรุณาเลือกเวลาใหม่');
     }
     
     if (editingId){
       const newList = list.map(it=> it.id===editingId ? {...it, name, code, room, day, classDate, classMonth, start, end} : it);
-      save(newList);
+      saveTimetable(newList);
       setEditingId(null);
     } else {
       const item = {id: Date.now().toString(), name, code, room, day, classDate, classMonth, start, end};
-      save([item, ...list]);
+      saveTimetable([item, ...list]);
     }
     setModalVisible(false);
   }
 
   function openAddExam(){
     setEditingExamId(null);
-    setExamTitle(''); setExamDate('Mon'); setExamDayOfMonth(''); setExamMonth(''); setExamStart('09:00'); setExamEnd('10:00'); setExamLocation('');
+    setExamTitle(''); setExamDate('Mon'); setExamDayOfMonth(''); setExamMonth(''); setExamStart('09:00'); setExamEnd('10:00'); setExamLocation(''); setExamSubjectId('');
     setExamModalVisible(true);
   }
 
   function openEditExam(ex){
     setEditingExamId(ex.id);
     setExamTitle(ex.title||''); setExamDate(ex.date||'Mon'); setExamDayOfMonth(ex.examDayOfMonth||''); setExamMonth(ex.examMonth||''); setExamStart(ex.start||'09:00'); setExamEnd(ex.end||'10:00'); setExamLocation(ex.location||'');
+    setExamSubjectId(ex.subjectId || '');
     setExamModalVisible(true);
   }
 
@@ -141,26 +142,91 @@ export default function Timetable(){
     });
   }
 
+  function hasActivityOverlapWithClasses(dayStr, startTime, endTime, excludeClassId = null) {
+    const startMin = timeToMinutes(startTime);
+    const endMin = timeToMinutes(endTime);
+
+    return list.some(item => {
+      if (item.day !== dayStr) return false;
+      if (excludeClassId && item.id === excludeClassId) return false;
+
+      const itemStartMin = timeToMinutes(item.start);
+      const itemEndMin = timeToMinutes(item.end);
+      return !(endMin <= itemStartMin || startMin >= itemEndMin);
+    });
+  }
+
   function addExam(){
     if (!examTitle.trim()) return Alert.alert('Please add an exam title');
 
-    if (hasExamTimeConflict(examDate, examDayOfMonth, examMonth, examStart, examEnd, editingExamId)) {
-      return Alert.alert('Time Conflict', 'This exam time overlaps with another exam on ' + examDate);
+    const hasExamConflict = hasExamTimeConflict(examDate, examDayOfMonth, examMonth, examStart, examEnd, editingExamId);
+    const hasClassConflict = hasActivityOverlapWithClasses(examDate, examStart, examEnd);
+
+    if (hasExamConflict || hasClassConflict) {
+      return Alert.alert('เวลาใช้งานซ้ำ', 'เวลานี้ทับกับกิจกรรมที่มีอยู่แล้ว กรุณาเลือกเวลาใหม่');
     }
     
     if (editingExamId){
-      const newList = exams.map(it=> it.id===editingExamId ? {...it, title: examTitle, date: examDate, examDayOfMonth, examMonth, start: examStart, end: examEnd, location: examLocation} : it);
+      const linkedClass = list.find(it => it.id === examSubjectId);
+      const newList = exams.map(it=> it.id===editingExamId ? {
+        ...it,
+        title: examTitle,
+        date: examDate,
+        examDayOfMonth,
+        examMonth,
+        start: examStart,
+        end: examEnd,
+        location: examLocation,
+        subjectId: examSubjectId || '',
+        subjectName: linkedClass?.name || '',
+      } : it);
       saveExams(newList);
       setEditingExamId(null);
     } else {
-      const item = {id: Date.now().toString(), title: examTitle, date: examDate, examDayOfMonth, examMonth, start: examStart, end: examEnd, location: examLocation};
+      const linkedClass = list.find(it => it.id === examSubjectId);
+      const item = {
+        id: Date.now().toString(),
+        title: examTitle,
+        date: examDate,
+        examDayOfMonth,
+        examMonth,
+        start: examStart,
+        end: examEnd,
+        location: examLocation,
+        subjectId: examSubjectId || '',
+        subjectName: linkedClass?.name || '',
+      };
       saveExams([item, ...exams]);
     }
     setExamModalVisible(false);
   }
 
-  function remove(id){
-    Alert.alert('Delete','Remove this class?', [{text:'Cancel'},{text:'OK', onPress: ()=> save(list.filter(i=>i.id!==id))}]);
+  function normalizeText(value) {
+    return (value || '').trim().toLowerCase();
+  }
+
+  function isExamLinkedToClass(exam, classItem) {
+    if (exam.subjectId && exam.subjectId === classItem.id) return true;
+
+    const className = normalizeText(classItem.name);
+    const examSubjectName = normalizeText(exam.subjectName);
+    const examTitleName = normalizeText(exam.title);
+
+    return className && (examSubjectName === className || examTitleName === className);
+  }
+
+  function remove(classItem){
+    Alert.alert('Delete','Remove this class?', [{text:'Cancel'},{
+      text:'OK',
+      onPress: ()=> {
+        const filteredClasses = list.filter(i => i.id !== classItem.id);
+        const filteredExams = exams.filter(ex => !isExamLinkedToClass(ex, classItem));
+        saveTimetable(filteredClasses);
+        if (filteredExams.length !== exams.length) {
+          saveExams(filteredExams);
+        }
+      }
+    }]);
   }
 
   function removeExam(id){
@@ -205,13 +271,19 @@ export default function Timetable(){
                       </View>
                       <View style={{flexDirection:'row', alignItems:'center'}}>
                         <TouchableOpacity onPress={()=>openEdit(it)} style={[styles.rowBtn, {marginRight:8}]}><Text>Edit</Text></TouchableOpacity>
-                        <TouchableOpacity onPress={()=>remove(it.id)} style={styles.del}><Text>Delete</Text></TouchableOpacity>
+                        <TouchableOpacity onPress={()=>remove(it)} style={styles.del}><Text>Delete</Text></TouchableOpacity>
                       </View>
                     </View>
                   ))}
                 </View>
               );
             }} />
+            {list.length===0 ? (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
+                <Text style={styles.emptySub}>Empty timetable. กด + เพื่อเพิ่มวิชาเรียน</Text>
+              </View>
+            ) : null}
           </>
         ) : (
           <>
@@ -237,6 +309,12 @@ export default function Timetable(){
                 </View>
               );
             }} />
+            {exams.length===0 ? (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
+                <Text style={styles.emptySub}>Empty exam schedule. กด + เพื่อเพิ่มตารางสอบ</Text>
+              </View>
+            ) : null}
           </>
         )}
       </View>
@@ -313,6 +391,15 @@ export default function Timetable(){
             <TextInput placeholder="Title" value={examTitle} onChangeText={setExamTitle} style={styles.input} />
             <TextInput placeholder="Location" value={examLocation} onChangeText={setExamLocation} style={styles.input} />
 
+            <View style={{borderWidth:1, borderColor:'#eee', borderRadius:6, overflow:'hidden', marginVertical:6, backgroundColor:'#fff'}}>
+              <Picker selectedValue={examSubjectId} onValueChange={v=>setExamSubjectId(v)}>
+                <Picker.Item label="Not linked to subject" value="" />
+                {list.map(subject => (
+                  <Picker.Item key={subject.id} label={subject.name} value={subject.id} />
+                ))}
+              </Picker>
+            </View>
+
             <View style={{borderWidth:1, borderColor:'#eee', borderRadius:6, overflow:'hidden', marginVertical:6}}>
               <Picker selectedValue={examDate} onValueChange={v=>setExamDate(v)}>
                 <Picker.Item label="Monday" value="Mon" />
@@ -368,6 +455,9 @@ const styles = StyleSheet.create({
   dayBlock:{paddingVertical:8, borderBottomWidth:1, borderColor:'#f0dff0'},
   dayTitle:{fontWeight:'700', marginBottom:6},
   classRow:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingVertical:6},
+  emptyCard:{marginTop:16, padding:14, borderRadius:10, borderWidth:1, borderColor:'#f0dff0', backgroundColor:'#fff', alignItems:'center'},
+  emptyTitle:{fontSize:16, fontWeight:'700', color:'#6b3550'},
+  emptySub:{marginTop:4, fontSize:13, color:'#7f6b78', textAlign:'center'},
   del:{padding:6},
   fab:{position:'absolute', right:18, bottom:88, width:56, height:56, borderRadius:28, backgroundColor:'#d184b8', alignItems:'center', justifyContent:'center', elevation:4, shadowColor:'#000', shadowOffset:{width:0,height:2}, shadowOpacity:0.2, shadowRadius:4},
   fabText:{color:'#fff', fontSize:28, lineHeight:30},
