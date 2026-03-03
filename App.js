@@ -79,11 +79,11 @@ function MainApp(){
 
 function TabButton({ title, iconName, onPress, isActive }) {
   return (
-    <TouchableOpacity onPress={onPress} style={styles.tabButton}>
+    <TouchableOpacity onPress={onPress} style={styles.tabBtn}>
       <View style={[styles.tabCircle, isActive && styles.activeTabCircle]}>
         <Ionicons name={iconName} size={24} color={isActive ? 'white' : 'black'} />
       </View>
-      <Text style={[styles.tabText, isActive && styles.activeTabText]}>{title}</Text>
+      <Text style={[styles.tabText, styles.tabTextMargin, isActive && styles.activeTabText]}>{title}</Text>
     </TouchableOpacity>
   );
 }
@@ -114,6 +114,9 @@ const styles = StyleSheet.create({
   },
   tabText:{
     color:'#6b3550'
+  },
+  tabTextMargin:{
+    marginTop:4
   },
   tabActive:{
     backgroundColor:'#f0c8df',
