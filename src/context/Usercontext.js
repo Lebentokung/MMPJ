@@ -5,6 +5,8 @@ export const Usercontext = createContext();
 
 const TIMETABLE_KEY = "timetable";
 const EXAMS_KEY = "exams";
+const PLANNER_ACTIVITIES_KEY = "plannerActivities";
+const STUDY_PLANS_KEY = "studyPlans";
 
 const userReducer = (state, action) => {
   switch (action.type) {
@@ -44,11 +46,25 @@ const userReducer = (state, action) => {
         exams: action.payload,
       };
 
+    case "SET_PLANNER_ACTIVITIES":
+      return {
+        ...state,
+        plannerActivities: action.payload,
+      };
+
+    case "SET_STUDY_PLANS":
+      return {
+        ...state,
+        studyPlans: action.payload,
+      };
+
     case "RESET_APP":
       return {
         ...state,
         timetable: [],
         exams: [],
+        plannerActivities: [],
+        studyPlans: [],
         profile: {
           studentId: "",
           name: "",
@@ -68,6 +84,8 @@ export const UserProvider = ({ children }) => {
     users: [],
     timetable: [],
     exams: [],
+    plannerActivities: [],
+    studyPlans: [],
     profile: {
       studentId: "",
       name: "",
@@ -83,9 +101,11 @@ export const UserProvider = ({ children }) => {
   }, []);
 
   async function loadInitialData() {
-    const [rawTimetable, rawExams] = await Promise.all([
+    const [rawTimetable, rawExams, rawPlannerActivities, rawStudyPlans] = await Promise.all([
       AsyncStorage.getItem(TIMETABLE_KEY),
       AsyncStorage.getItem(EXAMS_KEY),
+      AsyncStorage.getItem(PLANNER_ACTIVITIES_KEY),
+      AsyncStorage.getItem(STUDY_PLANS_KEY),
     ]);
 
     dispatch({
@@ -96,6 +116,16 @@ export const UserProvider = ({ children }) => {
     dispatch({
       type: "SET_EXAMS",
       payload: rawExams ? JSON.parse(rawExams) : [],
+    });
+
+    dispatch({
+      type: "SET_PLANNER_ACTIVITIES",
+      payload: rawPlannerActivities ? JSON.parse(rawPlannerActivities) : [],
+    });
+
+    dispatch({
+      type: "SET_STUDY_PLANS",
+      payload: rawStudyPlans ? JSON.parse(rawStudyPlans) : [],
     });
   }
 
@@ -109,11 +139,23 @@ export const UserProvider = ({ children }) => {
     await AsyncStorage.setItem(EXAMS_KEY, JSON.stringify(exams));
   }
 
+  async function savePlannerActivities(plannerActivities) {
+    dispatch({ type: "SET_PLANNER_ACTIVITIES", payload: plannerActivities });
+    await AsyncStorage.setItem(PLANNER_ACTIVITIES_KEY, JSON.stringify(plannerActivities));
+  }
+
+  async function saveStudyPlans(studyPlans) {
+    dispatch({ type: "SET_STUDY_PLANS", payload: studyPlans });
+    await AsyncStorage.setItem(STUDY_PLANS_KEY, JSON.stringify(studyPlans));
+  }
+
   async function resetAppData() {
     dispatch({ type: "RESET_APP" });
     await Promise.all([
       AsyncStorage.removeItem(TIMETABLE_KEY),
       AsyncStorage.removeItem(EXAMS_KEY),
+      AsyncStorage.removeItem(PLANNER_ACTIVITIES_KEY),
+      AsyncStorage.removeItem(STUDY_PLANS_KEY),
     ]);
   }
 
@@ -132,10 +174,14 @@ export const UserProvider = ({ children }) => {
         userState: state.users,
         timetable: state.timetable,
         exams: state.exams,
+        plannerActivities: state.plannerActivities,
+        studyPlans: state.studyPlans,
         profile: state.profile, 
         dispatch,
         saveTimetable,
         saveExams,
+        savePlannerActivities,
+        saveStudyPlans,
         saveProfile, 
         resetProfile,
         resetAppData,
