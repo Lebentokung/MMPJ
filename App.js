@@ -140,6 +140,6 @@ const styles = StyleSheet.create({
     alignItems:'center',
   },
   activeTabCircle:{
-    backgroundColor:'#6200ee',
+    backgroundColor:'#b36089',
   },
 });

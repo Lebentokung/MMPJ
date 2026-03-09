@@ -96,10 +96,15 @@ const ProfileScreen = () => {
           )}
         </TouchableOpacity>
 
+        <Text style={styles.subheader}>รหัสนิสิต</Text> 
         <TextInput style={styles.input} value={profile.studentId} editable={false} placeholder="รหัสนิสิต" />
+        <Text style={styles.subheader}>ชื่อ</Text>
         <TextInput style={styles.input} value={profile.name} editable={false} placeholder="ชื่อ" />
+        <Text style={styles.subheader}>อีเมล</Text>
         <TextInput style={styles.input} value={profile.email} editable={false} placeholder="อีเมล" />
+        <Text style={styles.subheader}>ชั้นปี</Text>
         <TextInput style={styles.input} value={profile.year} editable={false} placeholder="ชั้นปี" />
+        <Text style={styles.subheader}>คณะ</Text>
         <TextInput style={styles.input} value={profile.faculty} editable={false} placeholder="คณะ" />
 
         <View style={styles.buttonContainer}>
@@ -168,12 +173,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: "#7a3e65",
   },
+  subheader: {
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "left",
+    marginLeft:28,
+    marginBottom: 5,
+    color: "#7a3e65",
+  },
   avatarContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 2,
-    borderColor: "#b76e99",
+    borderColor: "#ececec",
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
@@ -189,9 +202,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 10,
     padding: 12,
-    marginBottom: 15,
+    marginBottom: 4,
     borderWidth: 1,
-    borderColor: "#c084a1",
+    borderColor: "#e6e6e6",
     width: "80%",
     alignSelf: "center",
   },
