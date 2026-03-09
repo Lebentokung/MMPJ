@@ -12,6 +12,7 @@ export default function Timetable(){
   const [code, setCode] = useState('');
   const [room, setRoom] = useState('');
   const [day, setDay] = useState('Mon');
+  const [selectedDays, setSelectedDays] = useState(['Mon']);
   const [classDate, setClassDate] = useState('');
   const [classMonth, setClassMonth] = useState('');
   const [start, setStart] = useState('09:00');
@@ -37,13 +38,25 @@ export default function Timetable(){
   function openAdd(){
     setEditingId(null);
     setName(''); setCode(''); setRoom(''); setDay('Mon'); setClassDate(''); setClassMonth(''); setStart('09:00'); setEnd('10:00');
+    setSelectedDays(['Mon']);
     setModalVisible(true);
   }
 
   function openEdit(item){
     setEditingId(item.id);
     setName(item.name||''); setCode(item.code||''); setRoom(item.room||''); setDay(item.day||'Mon'); setClassDate(item.classDate||''); setClassMonth(item.classMonth||''); setStart(item.start||'09:00'); setEnd(item.end||'10:00');
+    setSelectedDays([item.day || 'Mon']);
     setModalVisible(true);
+  }
+
+  function toggleSelectedDay(dayStr) {
+    setSelectedDays(prev => {
+      if (prev.includes(dayStr)) {
+        if (prev.length === 1) return prev;
+        return prev.filter(d => d !== dayStr);
+      }
+      return [...prev, dayStr];
+    });
   }
 
   function timeToMinutes(time) {
@@ -66,38 +79,43 @@ export default function Timetable(){
     });
   }
 
-  function hasClassOverlapWithActivities(dayStr, startTime, endTime, excludeExamId = null) {
-    const startMin = timeToMinutes(startTime);
-    const endMin = timeToMinutes(endTime);
-
-    return exams.some(item => {
-      if (item.date !== dayStr) return false;
-      if (excludeExamId && item.id === excludeExamId) return false;
-
-      const itemStartMin = timeToMinutes(item.start);
-      const itemEndMin = timeToMinutes(item.end);
-      return !(endMin <= itemStartMin || startMin >= itemEndMin);
-    });
-  }
-
   function addClass(){
     if (!name.trim()) return Alert.alert('Please add a subject name');
-    
-    const hasClassConflict = hasTimeConflict(day, start, end, editingId);
-    const hasActivityConflict = hasClassOverlapWithActivities(day, start, end);
 
-    if (hasClassConflict || hasActivityConflict) {
-      return Alert.alert('เวลาใช้งานซ้ำ', 'เวลานี้ทับกับกิจกรรมที่มีอยู่แล้ว กรุณาเลือกเวลาใหม่');
-    }
-    
-    if (editingId){
+    if (editingId) {
+      const hasClassConflict = hasTimeConflict(day, start, end, editingId);
+      if (hasClassConflict) {
+        return Alert.alert('เวลาใช้งานซ้ำ', 'วันเดียวกันไม่สามารถลงเวลาซ้ำกันได้ กรุณาเลือกเวลาใหม่');
+      }
+
       const newList = list.map(it=> it.id===editingId ? {...it, name, code, room, day, classDate, classMonth, start, end} : it);
       saveTimetable(newList);
       setEditingId(null);
-    } else {
-      const item = {id: Date.now().toString(), name, code, room, day, classDate, classMonth, start, end};
-      saveTimetable([item, ...list]);
+      setModalVisible(false);
+      return;
     }
+
+    const daysToAdd = selectedDays.length ? selectedDays : [day];
+    const conflictDays = daysToAdd.filter(selectedDay => hasTimeConflict(selectedDay, start, end));
+
+    if (conflictDays.length > 0) {
+      return Alert.alert('เวลาใช้งานซ้ำ', 'วันเดียวกันไม่สามารถลงเวลาซ้ำกันได้ กรุณาเลือกเวลาใหม่');
+    }
+
+    const now = Date.now();
+    const newItems = daysToAdd.map((selectedDay, index) => ({
+      id: `${now}-${index}`,
+      name,
+      code,
+      room,
+      day: selectedDay,
+      classDate,
+      classMonth,
+      start,
+      end,
+    }));
+
+    saveTimetable([...newItems, ...list]);
     setModalVisible(false);
   }
 
@@ -335,17 +353,37 @@ export default function Timetable(){
             <TextInput placeholder="Code" value={code} onChangeText={setCode} style={styles.input} />
             <TextInput placeholder="Room" value={room} onChangeText={setRoom} style={styles.input} />
 
-            <View style={{borderWidth:1, borderColor:'#eee', borderRadius:6, overflow:'hidden', marginVertical:6}}>
-              <Picker selectedValue={day} onValueChange={v=>setDay(v)}>
-                <Picker.Item label="Monday" value="Mon" />
-                <Picker.Item label="Tuesday" value="Tue" />
-                <Picker.Item label="Wednesday" value="Wed" />
-                <Picker.Item label="Thursday" value="Thu" />
-                <Picker.Item label="Friday" value="Fri" />
-                <Picker.Item label="Saturday" value="Sat" />
-                <Picker.Item label="Sunday" value="Sun" />
-              </Picker>
-            </View>
+            {editingId ? (
+              <View style={{borderWidth:1, borderColor:'#eee', borderRadius:6, overflow:'hidden', marginVertical:6}}>
+                <Picker selectedValue={day} onValueChange={v=>setDay(v)}>
+                  <Picker.Item label="Monday" value="Mon" />
+                  <Picker.Item label="Tuesday" value="Tue" />
+                  <Picker.Item label="Wednesday" value="Wed" />
+                  <Picker.Item label="Thursday" value="Thu" />
+                  <Picker.Item label="Friday" value="Fri" />
+                  <Picker.Item label="Saturday" value="Sat" />
+                  <Picker.Item label="Sunday" value="Sun" />
+                </Picker>
+              </View>
+            ) : (
+              <View style={styles.multiDayWrap}>
+                <Text style={styles.multiDayLabel}>Select days (multi-select)</Text>
+                <View style={styles.dayChipRow}>
+                  {days.map(d => {
+                    const active = selectedDays.includes(d);
+                    return (
+                      <TouchableOpacity
+                        key={d}
+                        onPress={() => toggleSelectedDay(d)}
+                        style={[styles.dayChip, active && styles.dayChipActive]}
+                      >
+                        <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>{d}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
 
             <View style={{flexDirection:'row', justifyContent:'space-between'}}>
               <TextInput
@@ -458,6 +496,13 @@ const styles = StyleSheet.create({
   emptyCard:{marginTop:16, padding:14, borderRadius:10, borderWidth:1, borderColor:'#f0dff0', backgroundColor:'#fff', alignItems:'center'},
   emptyTitle:{fontSize:16, fontWeight:'700', color:'#6b3550'},
   emptySub:{marginTop:4, fontSize:13, color:'#7f6b78', textAlign:'center'},
+  multiDayWrap:{marginVertical:6},
+  multiDayLabel:{fontSize:12, color:'#6b3550', marginBottom:6},
+  dayChipRow:{flexDirection:'row', flexWrap:'wrap'},
+  dayChip:{paddingVertical:6, paddingHorizontal:10, borderRadius:14, borderWidth:1, borderColor:'#e8cde0', marginRight:8, marginBottom:8, backgroundColor:'#fff'},
+  dayChipActive:{backgroundColor:'#b96aa2', borderColor:'#b96aa2'},
+  dayChipText:{fontSize:12, color:'#6b3550', fontWeight:'600'},
+  dayChipTextActive:{color:'#fff'},
   del:{padding:6},
   fab:{position:'absolute', right:18, bottom:88, width:56, height:56, borderRadius:28, backgroundColor:'#d184b8', alignItems:'center', justifyContent:'center', elevation:4, shadowColor:'#000', shadowOffset:{width:0,height:2}, shadowOpacity:0.2, shadowRadius:4},
   fabText:{color:'#fff', fontSize:28, lineHeight:30},
