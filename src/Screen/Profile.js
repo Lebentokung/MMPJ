@@ -16,6 +16,9 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Usercontext } from "../context/Usercontext";
 
+const CLOUDINARY_CLOUD_NAME = "dot2hss8l";
+const CLOUDINARY_UPLOAD_PRESET = "tnodulug";
+
 const PINK = {
   primary: '#d4609a',
   light: '#fce8f5',
@@ -40,6 +43,36 @@ const ProfileScreen = () => {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const uploadImageToCloudinary = async (localUri) => {
+    const fileName = localUri.split("/").pop() || `profile-${Date.now()}.jpg`;
+    const fileExt = fileName.split(".").pop()?.toLowerCase();
+    const mimeType = fileExt === "png" ? "image/png" : "image/jpeg";
+
+    const formData = new FormData();
+    formData.append("file", {
+      uri: localUri,
+      type: mimeType,
+      name: fileName,
+    });
+    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+    formData.append("folder", "profile");
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+    if (!response.ok || !data.secure_url) {
+      throw new Error(data?.error?.message || "Cloudinary upload failed");
+    }
+
+    return data.secure_url;
+  };
 
   const openEditModal = () => {
     setEditStudentId(profile.studentId);
@@ -71,22 +104,33 @@ const ProfileScreen = () => {
   };
 
   const handleSave = async () => {
-    setLoading(true);
-    const result = await updateUserProfile({
-      studentId: editStudentId,
-      name: editName,
-      email: editEmail,
-      year: editYear,
-      faculty: editFaculty,
-      avatar: editAvatar,
-    });
-    setLoading(false);
+    try {
+      setLoading(true);
 
-    if (result.success) {
-      setModalVisible(false);
-      Alert.alert("สำเร็จ", "บันทึกข้อมูลเรียบร้อย");
-    } else {
-      Alert.alert("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
+      let avatarUrl = editAvatar;
+      if (editAvatar && !editAvatar.startsWith("http")) {
+        avatarUrl = await uploadImageToCloudinary(editAvatar);
+      }
+
+      const result = await updateUserProfile({
+        studentId: editStudentId,
+        name: editName,
+        email: editEmail,
+        year: editYear,
+        faculty: editFaculty,
+        avatar: avatarUrl,
+      });
+
+      if (result.success) {
+        setModalVisible(false);
+        Alert.alert("สำเร็จ", "บันทึกข้อมูลเรียบร้อย");
+      } else {
+        Alert.alert("ผิดพลาด", result.error || "ไม่สามารถบันทึกข้อมูลได้");
+      }
+    } catch (error) {
+      Alert.alert("อัปโหลดรูปไม่สำเร็จ", error.message || "กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setLoading(false);
     }
   };
 
