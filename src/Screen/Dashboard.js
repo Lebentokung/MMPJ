@@ -1,11 +1,13 @@
 import React, { useContext, useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ScrollView } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ScrollView, Modal, TextInput, Pressable } from "react-native";
 import { Usercontext } from "../context/Usercontext";
 
-const DashboardScreen = ({ onPlannerQuickAdd }) => {
+const DashboardScreen = () => {
   const { timetable, exams, plannerActivities, studyPlans, savePlannerActivities, saveStudyPlans } = useContext(Usercontext);
   const [period, setPeriod] = useState("today");
   const [dashboardTab, setDashboardTab] = useState("classes");
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
+  const [quickActivityName, setQuickActivityName] = useState("");
   const now = new Date();
 
   const periodRange = useMemo(() => {
@@ -153,6 +155,30 @@ const DashboardScreen = ({ onPlannerQuickAdd }) => {
     }).format(date);
   }
 
+  function quickAddActivity() {
+    const trimmedName = quickActivityName.trim();
+    if (!trimmedName) {
+      Alert.alert("กรุณากรอกชื่อกิจกรรม");
+      return;
+    }
+
+    const todayDayCode = getDayCodeFromDate(now);
+    const newActivity = {
+      id: Date.now().toString(),
+      name: trimmedName,
+      room: "-",
+      day: todayDayCode,
+      start: "09:00",
+      end: "10:00",
+      classDate: "",
+      classMonth: "",
+    };
+
+    savePlannerActivities([newActivity, ...(plannerActivities || [])]);
+    setQuickActivityName("");
+    setQuickAddVisible(false);
+  }
+
   return (
     <View style={{ flex: 1, padding:15,backgroundColor:'#fff4fb' }}>
       <View style={{ flex: 1 }}>
@@ -294,9 +320,37 @@ const DashboardScreen = ({ onPlannerQuickAdd }) => {
         </ScrollView>
       </View>
 
-      <TouchableOpacity style={styles.fab} onPress={onPlannerQuickAdd}>
-        <Text style={styles.fabText}>+</Text>
+      <TouchableOpacity style={styles.fab} onPress={() => setQuickAddVisible(true)}>
+        <Text style={styles.fabLabel}>+</Text>
       </TouchableOpacity>
+
+      <Modal visible={quickAddVisible} animationType="slide" transparent onRequestClose={() => setQuickAddVisible(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Quick Add Activity</Text>
+            <TextInput
+              placeholder="ชื่อกิจกรรม"
+              value={quickActivityName}
+              onChangeText={setQuickActivityName}
+              style={styles.quickInput}
+            />
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={[styles.modalBtn, { backgroundColor: "#ccc" }]}
+                onPress={() => {
+                  setQuickAddVisible(false);
+                  setQuickActivityName("");
+                }}
+              >
+                <Text>ยกเลิก</Text>
+              </Pressable>
+              <Pressable style={[styles.modalBtn, { backgroundColor: "#b96aa2" }]} onPress={quickAddActivity}>
+                <Text style={{ color: "#fff" }}>บันทึก</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -421,8 +475,9 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
   modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
   modalBtn: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center', marginHorizontal: 6 },
+  quickInput: { borderWidth: 1, borderColor: '#eee', padding: 10, borderRadius: 6, marginTop: 4, backgroundColor: '#fff' },
   fab: { position: 'absolute', right: 18, bottom: 88, width: 56, height: 56, borderRadius: 28, backgroundColor: '#d184b8', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
-  fabText: { color: '#fff', fontSize: 28, lineHeight: 30 },
+  fabLabel: { color: '#fff', fontSize: 28, fontWeight: '700', lineHeight: 30 },
 });
 
 export default DashboardScreen;

@@ -7,6 +7,14 @@ const TIMETABLE_KEY = "timetable";
 const EXAMS_KEY = "exams";
 const PLANNER_ACTIVITIES_KEY = "plannerActivities";
 const STUDY_PLANS_KEY = "studyPlans";
+const DEFAULT_PROFILE = {
+  studentId: "",
+  name: "",
+  email: "",
+  year: "",
+  faculty: "",
+  avatar: null,
+};
 
 const userReducer = (state, action) => {
   switch (action.type) {
@@ -19,19 +27,13 @@ const userReducer = (state, action) => {
     case "SET_PROFILE":
       return {
         ...state,
-        profile: action.payload,
+        profile: action.payload ? { ...DEFAULT_PROFILE, ...action.payload } : DEFAULT_PROFILE,
       };
 
     case "RESET_PROFILE":
       return {
         ...state,
-        profile: {
-          studentId: "",
-          name: "",
-          email: "",
-          year: "",
-          faculty: "",
-        },
+        profile: DEFAULT_PROFILE,
       };
 
     case "SET_TIMETABLE":
@@ -65,13 +67,7 @@ const userReducer = (state, action) => {
         exams: [],
         plannerActivities: [],
         studyPlans: [],
-        profile: {
-          studentId: "",
-          name: "",
-          email: "",
-          year: "",
-          faculty: "",
-        },
+        profile: DEFAULT_PROFILE,
       };
 
     default:
@@ -86,14 +82,7 @@ export const UserProvider = ({ children }) => {
     exams: [],
     plannerActivities: [],
     studyPlans: [],
-    profile: {
-      studentId: "",
-      name: "",
-      email: "",
-      year: "",
-      faculty: "",
-      avatar: null
-    },
+    profile: DEFAULT_PROFILE,
   });
 
   useEffect(() => {
@@ -159,6 +148,19 @@ export const UserProvider = ({ children }) => {
     ]);
   }
 
+  async function resetAppDataExceptProfile() {
+    dispatch({ type: "SET_TIMETABLE", payload: [] });
+    dispatch({ type: "SET_EXAMS", payload: [] });
+    dispatch({ type: "SET_PLANNER_ACTIVITIES", payload: [] });
+    dispatch({ type: "SET_STUDY_PLANS", payload: [] });
+    await Promise.all([
+      AsyncStorage.removeItem(TIMETABLE_KEY),
+      AsyncStorage.removeItem(EXAMS_KEY),
+      AsyncStorage.removeItem(PLANNER_ACTIVITIES_KEY),
+      AsyncStorage.removeItem(STUDY_PLANS_KEY),
+    ]);
+  }
+
   
   function saveProfile(profileData) {
     dispatch({ type: "SET_PROFILE", payload: profileData });
@@ -185,6 +187,7 @@ export const UserProvider = ({ children }) => {
         saveProfile, 
         resetProfile,
         resetAppData,
+        resetAppDataExceptProfile,
       }}
     >
       {children}

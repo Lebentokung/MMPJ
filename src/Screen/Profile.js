@@ -16,7 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Usercontext } from "../context/Usercontext";
 
 const ProfileScreen = () => {
-  const { profile, saveProfile, resetAppData } = useContext(Usercontext);
+  const { profile, saveProfile, resetAppDataExceptProfile } = useContext(Usercontext);
 
   const [editStudentId, setEditStudentId] = useState("");
   const [editName, setEditName] = useState("");
@@ -71,13 +71,14 @@ const ProfileScreen = () => {
   };
 
   const handleDelete = () => {
-    Alert.alert("ยืนยันการลบ", "คุณต้องการลบข้อมูลทั้งหมดใช่หรือไม่?", [
+    Alert.alert("ลบข้อมูลทั้งหมด", "ต้องการลบทั้งหมด ยกเว้นโปรไฟล์ หรือไม่?", [
       { text: "ยกเลิก", style: "cancel" },
       {
-        text: "ยืนยัน",
+        text: "ลบ",
         style: "destructive",
         onPress: () => {
-          resetAppData();
+          resetAppDataExceptProfile();
+          Alert.alert("ลบข้อมูลเรียบร้อย");
         },
       },
     ]);

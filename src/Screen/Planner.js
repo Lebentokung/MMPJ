@@ -236,13 +236,13 @@ export default function PlannerScreen({ plannerAddRequest, clearPlannerAddReques
       <TouchableOpacity style={styles.fab} onPress={() => {
         if (viewMode === 'classes') openAdd();
         else if (viewMode === 'study') {
-       
           setEditingPlanId(null);
           setSubject(''); setTopic(''); setDate(''); setTime('');
           setPlanModalVisible(true);
         }
-      }} accessibilityLabel="Add">
-        <Text style={styles.fabText}>+</Text>
+      }} accessibilityLabel="Quick Add">
+        {/* ใช้ไอคอน + แบบ Material หรือ FontAwesome ได้ ถ้ามีไลบรารี */}
+        <Text style={styles.fabText}>＋</Text>
       </TouchableOpacity>
 
     
