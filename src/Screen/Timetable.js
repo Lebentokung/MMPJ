@@ -1,9 +1,22 @@
-import React, {useContext, useState} from 'react';
-import {View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Modal, Pressable} from 'react-native';
+import React, { useContext, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Modal, Pressable } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { Ionicons } from '@expo/vector-icons';
 import { Usercontext } from '../context/Usercontext';
 
-export default function Timetable(){
+const PINK = {
+  primary: '#d4609a',
+  light: '#fce8f5',
+  medium: '#f0aed4',
+  dark: '#8c2f60',
+  bg: '#fff8fc',
+  card: '#fff',
+  border: '#f5d0e8',
+  text: '#5a1f40',
+  sub: '#9e6080',
+};
+
+export default function Timetable() {
   const { timetable, exams, saveTimetable, saveExams } = useContext(Usercontext);
   const [list, setList] = useState(timetable);
   const [modalVisible, setModalVisible] = useState(false);
@@ -13,9 +26,10 @@ export default function Timetable(){
   const [room, setRoom] = useState('');
   const [day, setDay] = useState('Mon');
   const [selectedDays, setSelectedDays] = useState(['Mon']);
+  const [classDate, setClassDate] = useState('');
+  const [classMonth, setClassMonth] = useState('');
   const [start, setStart] = useState('09:00');
   const [end, setEnd] = useState('10:00');
-
   const [viewMode, setViewMode] = useState('classes');
 
   const [examModalVisible, setExamModalVisible] = useState(false);
@@ -33,16 +47,19 @@ export default function Timetable(){
     setList(timetable);
   }, [timetable]);
 
-  function openAdd(){
+  function openAdd() {
     setEditingId(null);
-    setName(''); setCode(''); setRoom(''); setDay('Mon'); setStart('09:00'); setEnd('10:00');
+    setName(''); setCode(''); setRoom(''); setDay('Mon');
+    setClassDate(''); setClassMonth(''); setStart('09:00'); setEnd('10:00');
     setSelectedDays(['Mon']);
     setModalVisible(true);
   }
 
-  function openEdit(item){
+  function openEdit(item) {
     setEditingId(item.id);
-    setName(item.name||''); setCode(item.code||''); setRoom(item.room||''); setDay(item.day||'Mon'); setStart(item.start||'09:00'); setEnd(item.end||'10:00');
+    setName(item.name || ''); setCode(item.code || ''); setRoom(item.room || '');
+    setDay(item.day || 'Mon'); setClassDate(item.classDate || '');
+    setClassMonth(item.classMonth || ''); setStart(item.start || '09:00'); setEnd(item.end || '10:00');
     setSelectedDays([item.day || 'Mon']);
     setModalVisible(true);
   }
@@ -65,19 +82,16 @@ export default function Timetable(){
   function hasTimeConflict(dayStr, startTime, endTime, excludeId = null) {
     const startMin = timeToMinutes(startTime);
     const endMin = timeToMinutes(endTime);
-    
     return list.some(item => {
       if (item.day !== dayStr) return false;
       if (excludeId && item.id === excludeId) return false;
-      
       const itemStartMin = timeToMinutes(item.start);
       const itemEndMin = timeToMinutes(item.end);
-      
       return !(endMin <= itemStartMin || startMin >= itemEndMin);
     });
   }
 
-  function addClass(){
+  function addClass() {
     if (!name.trim()) return Alert.alert('Please add a subject name');
 
     if (editingId) {
@@ -85,8 +99,7 @@ export default function Timetable(){
       if (hasClassConflict) {
         return Alert.alert('เวลาใช้งานซ้ำ', 'วันเดียวกันไม่สามารถลงเวลาซ้ำกันได้ กรุณาเลือกเวลาใหม่');
       }
-
-      const newList = list.map(it=> it.id===editingId ? {...it, name, code, room, day, start, end} : it);
+      const newList = list.map(it => it.id === editingId ? { ...it, name, code, room, day, classDate, classMonth, start, end } : it);
       saveTimetable(newList);
       setEditingId(null);
       setModalVisible(false);
@@ -95,7 +108,6 @@ export default function Timetable(){
 
     const daysToAdd = selectedDays.length ? selectedDays : [day];
     const conflictDays = daysToAdd.filter(selectedDay => hasTimeConflict(selectedDay, start, end));
-
     if (conflictDays.length > 0) {
       return Alert.alert('เวลาใช้งานซ้ำ', 'วันเดียวกันไม่สามารถลงเวลาซ้ำกันได้ กรุณาเลือกเวลาใหม่');
     }
@@ -103,12 +115,10 @@ export default function Timetable(){
     const now = Date.now();
     const newItems = daysToAdd.map((selectedDay, index) => ({
       id: `${now}-${index}`,
-      name,
-      code,
-      room,
+      name, code, room,
       day: selectedDay,
-      start,
-      end,
+      classDate, classMonth,
+      start, end,
     }));
 
     saveTimetable([...newItems, ...list]);
@@ -119,56 +129,50 @@ export default function Timetable(){
       const newClassId = newItems[0]?.id;
       if (newClassId) {
         setEditingExamId(null);
-        setExamTitle(name); 
-        setExamDate('Mon'); 
-        setExamDayOfMonth(''); 
-        setExamMonth(''); 
-        setExamStart('09:00'); 
-        setExamEnd('10:00'); 
-        setExamLocation(''); 
+        setExamTitle(name);
+        setExamDate('Mon');
+        setExamDayOfMonth('');
+        setExamMonth('');
+        setExamStart('09:00');
+        setExamEnd('10:00');
+        setExamLocation('');
         setExamSubjectId(newClassId);
         setExamModalVisible(true);
       }
     }, 500);
   }
 
-  function openAddExam(){
+  function openAddExam() {
     setEditingExamId(null);
-    setExamTitle(''); setExamDate('Mon'); setExamDayOfMonth(''); setExamMonth(''); setExamStart('09:00'); setExamEnd('10:00'); setExamLocation(''); setExamSubjectId('');
+    setExamTitle(''); setExamDate('Mon'); setExamDayOfMonth(''); setExamMonth('');
+    setExamStart('09:00'); setExamEnd('10:00'); setExamLocation(''); setExamSubjectId('');
     setExamModalVisible(true);
   }
 
-  function openEditExam(ex){
+  function openEditExam(ex) {
     setEditingExamId(ex.id);
-    setExamTitle(ex.title||''); setExamDate(ex.date||'Mon'); setExamDayOfMonth(ex.examDayOfMonth||''); setExamMonth(ex.examMonth||''); setExamStart(ex.start||'09:00'); setExamEnd(ex.end||'10:00'); setExamLocation(ex.location||'');
-    setExamSubjectId(ex.subjectId || '');
+    setExamTitle(ex.title || ''); setExamDate(ex.date || 'Mon');
+    setExamDayOfMonth(ex.examDayOfMonth || ''); setExamMonth(ex.examMonth || '');
+    setExamStart(ex.start || '09:00'); setExamEnd(ex.end || '10:00');
+    setExamLocation(ex.location || ''); setExamSubjectId(ex.subjectId || '');
     setExamModalVisible(true);
   }
 
   function hasExamTimeConflict(dateStr, dayOfMonth, month, startTime, endTime, excludeId = null) {
     const startMin = timeToMinutes(startTime);
     const endMin = timeToMinutes(endTime);
-    
     return exams.some(item => {
       const isSameDate =
         item.date === dateStr &&
         (item.examDayOfMonth || '') === dayOfMonth &&
         (item.examMonth || '') === month;
-
       const isLegacySameDate =
         item.date === dateStr &&
-        !item.examDayOfMonth &&
-        !item.examMonth &&
-        !dayOfMonth &&
-        !month;
-
+        !item.examDayOfMonth && !item.examMonth && !dayOfMonth && !month;
       if (!isSameDate && !isLegacySameDate) return false;
       if (excludeId && item.id === excludeId) return false;
-      
       const itemStartMin = timeToMinutes(item.start);
       const itemEndMin = timeToMinutes(item.end);
-      
-      // Check if times overlap
       return !(endMin <= itemStartMin || startMin >= itemEndMin);
     });
   }
@@ -176,18 +180,16 @@ export default function Timetable(){
   function hasActivityOverlapWithClasses(dayStr, startTime, endTime, excludeClassId = null) {
     const startMin = timeToMinutes(startTime);
     const endMin = timeToMinutes(endTime);
-
     return list.some(item => {
       if (item.day !== dayStr) return false;
       if (excludeClassId && item.id === excludeClassId) return false;
-
       const itemStartMin = timeToMinutes(item.start);
       const itemEndMin = timeToMinutes(item.end);
       return !(endMin <= itemStartMin || startMin >= itemEndMin);
     });
   }
 
-  function addExam(){
+  function addExam() {
     if (!examTitle.trim()) return Alert.alert('Please add an exam title');
 
     const hasExamConflict = hasExamTimeConflict(examDate, examDayOfMonth, examMonth, examStart, examEnd, editingExamId);
@@ -196,38 +198,25 @@ export default function Timetable(){
     if (hasExamConflict || hasClassConflict) {
       return Alert.alert('เวลาใช้งานซ้ำ', 'เวลานี้ทับกับกิจกรรมที่มีอยู่แล้ว กรุณาเลือกเวลาใหม่');
     }
-    
-    if (editingExamId){
+
+    if (editingExamId) {
       const linkedClass = list.find(it => it.id === examSubjectId);
-      const newList = exams.map(it=> it.id===editingExamId ? {
+      const newList = exams.map(it => it.id === editingExamId ? {
         ...it,
-        title: examTitle,
-        date: examDate,
-        examDayOfMonth,
-        examMonth,
-        start: examStart,
-        end: examEnd,
-        location: examLocation,
-        subjectId: examSubjectId || '',
-        subjectName: linkedClass?.name || '',
+        title: examTitle, date: examDate, examDayOfMonth, examMonth,
+        start: examStart, end: examEnd, location: examLocation,
+        subjectId: examSubjectId || '', subjectName: linkedClass?.name || '',
       } : it);
       saveExams(newList);
       setEditingExamId(null);
     } else {
       const linkedClass = list.find(it => it.id === examSubjectId);
-      const item = {
+      saveExams([{
         id: Date.now().toString(),
-        title: examTitle,
-        date: examDate,
-        examDayOfMonth,
-        examMonth,
-        start: examStart,
-        end: examEnd,
-        location: examLocation,
-        subjectId: examSubjectId || '',
-        subjectName: linkedClass?.name || '',
-      };
-      saveExams([item, ...exams]);
+        title: examTitle, date: examDate, examDayOfMonth, examMonth,
+        start: examStart, end: examEnd, location: examLocation,
+        subjectId: examSubjectId || '', subjectName: linkedClass?.name || '',
+      }, ...exams]);
     }
     setExamModalVisible(false);
   }
@@ -238,411 +227,436 @@ export default function Timetable(){
 
   function isExamLinkedToClass(exam, classItem) {
     if (exam.subjectId && exam.subjectId === classItem.id) return true;
-
     const className = normalizeText(classItem.name);
     const examSubjectName = normalizeText(exam.subjectName);
     const examTitleName = normalizeText(exam.title);
-
     return className && (examSubjectName === className || examTitleName === className);
   }
 
-  function remove(classItem){
-    Alert.alert('Delete','Remove this class?', [{text:'Cancel'},{
-      text:'OK',
-      onPress: ()=> {
+  function remove(classItem) {
+    Alert.alert('Delete', 'Remove this class?', [{ text: 'Cancel' }, {
+      text: 'OK',
+      onPress: () => {
         const filteredClasses = list.filter(i => i.id !== classItem.id);
         const filteredExams = exams.filter(ex => !isExamLinkedToClass(ex, classItem));
         saveTimetable(filteredClasses);
-        if (filteredExams.length !== exams.length) {
-          saveExams(filteredExams);
-        }
+        if (filteredExams.length !== exams.length) saveExams(filteredExams);
       }
     }]);
   }
 
-  function removeExam(id){
-    Alert.alert('Delete','Remove this exam?', [{text:'Cancel'},{text:'OK', onPress: ()=> saveExams(exams.filter(i=>i.id!==id))}]);
+  function removeExam(id) {
+    Alert.alert('Delete', 'Remove this exam?', [{ text: 'Cancel' }, {
+      text: 'OK', onPress: () => saveExams(exams.filter(i => i.id !== id))
+    }]);
   }
 
-  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const dayNames = {
-    'Mon': 'Monday',
-    'Tue': 'Tuesday',
-    'Wed': 'Wednesday',
-    'Thu': 'Thursday',
-    'Fri': 'Friday',
-    'Sat': 'Saturday',
-    'Sun': 'Sunday'
-  };
-
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const dayNames = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday' };
+  const dayColors = { Mon: '#ffd6e8', Tue: '#fce0f5', Wed: '#f5d6ff', Thu: '#e8d6ff', Fri: '#d6e8ff', Sat: '#d6f5e8', Sun: '#fff0d6' };
+  const dayEmoji = { Mon: '🟨', Tue: '⬜', Wed: '🟩', Thu: '🟧', Fri: '🟦', Sat: '🟪', Sun: '🟥' };
   return (
-  <View style={styles.container}>
-    <Text style={styles.header}>Timetable</Text>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerBand}>
+        <Text style={styles.appTitle}>📅 Timetable</Text>
+      </View>
 
-    <View style={{flex:1}}>
-
-      {/* Seg Control */}
+      {/* Segment Control */}
       <View style={styles.segControl}>
         <TouchableOpacity
-          style={[styles.segBtn, viewMode==='classes' && styles.segActive]}
-          onPress={()=>setViewMode('classes')}
+          style={[styles.segBtn, viewMode === 'classes' && styles.segActive]}
+          onPress={() => setViewMode('classes')}
         >
-          <Text style={viewMode==='classes'?{fontWeight:'700',color:'#fff'}:{}}>
-            Timetable
-          </Text>
+          <Ionicons name="book-outline" size={15} color={viewMode === 'classes' ? PINK.primary : PINK.sub} />
+          <Text style={[styles.segText, viewMode === 'classes' && styles.segTextActive]}>ตารางเรียน</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
-          style={[styles.segBtn, viewMode==='exams' && styles.segActive]}
-          onPress={()=>setViewMode('exams')}
+          style={[styles.segBtn, viewMode === 'exams' && styles.segActive]}
+          onPress={() => setViewMode('exams')}
         >
-          <Text style={viewMode==='exams'?{fontWeight:'700',color:'#fff'}:{}}>
-            Exams
-          </Text>
+          <Ionicons name="document-text-outline" size={15} color={viewMode === 'exams' ? PINK.primary : PINK.sub} />
+          <Text style={[styles.segText, viewMode === 'exams' && styles.segTextActive]}>ตารางสอบ</Text>
         </TouchableOpacity>
       </View>
 
-      {viewMode==='classes' ? (
-        <>
-          <Text style={{fontWeight:'700', marginVertical:8}}>
-            Weekly View
-          </Text>
-
-          {/* Scroll เฉพาะ Monday-Sunday */}
-          <ScrollView
-            style={{flex:1}}
+      <View style={{ flex: 1, paddingHorizontal: 16 }}>
+        {viewMode === 'classes' ? (
+          <FlatList
+            data={days}
+            keyExtractor={d => d}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{paddingBottom:120}}
-          >
-
-            {days.map(item=>{
-              const items = list.filter(i=>i.day===item)
-
-              return(
-                <View key={item} style={styles.dayBlock}>
-                  <Text style={styles.dayTitle}>{dayNames[item]}</Text>
-
-                  {items.length===0 ? (
-                    <Text style={{opacity:0.6}}>No classes</Text>
+            contentContainerStyle={{ paddingBottom: 120 }}
+            renderItem={({ item }) => {
+              const items = list.filter(i => i.day === item);
+              return (
+                <View style={styles.dayBlock}>
+                  <View style={[styles.dayHeader, { backgroundColor: dayColors[item] || PINK.light }]}>
+                    <Text style={styles.dayEmoji}>{dayEmoji[item]}</Text>
+                    <Text style={styles.dayTitle}>{dayNames[item]}</Text>
+                    <View style={styles.dayBadge}><Text style={styles.dayBadgeText}>{items.length}</Text></View>
+                  </View>
+                  {items.length === 0 ? (
+                    <Text style={styles.emptyDay}>ไม่มีคลาส</Text>
                   ) : (
-                    items.map(it=>(
-                      <View key={it.id} style={styles.classCard}>
-                        <View>
-                          <Text style={{fontWeight:'600'}}>
-                            {it.name} ({it.code})
-                          </Text>
-
-                          <Text>
-                            {it.start} - {it.end} • {it.room}
-                          </Text>
+                    items.map(it => (
+                      <View key={it.id} style={styles.classRow}>
+                        <View style={styles.classRowLeft}>
+                          <Text style={styles.classRowName}>{it.name}</Text>
+                          {it.code ? <Text style={styles.classRowCode}>{it.code}</Text> : null}
+                          <View style={styles.classTagRow}>
+                            <View style={styles.tag}><Text style={styles.tagText}>🕐 {it.start}–{it.end}</Text></View>
+                            <View style={styles.tag}><Text style={styles.tagText}>📍 {it.room}</Text></View>
+                          </View>
                         </View>
-
-                        <View style={{flexDirection:'row',alignItems:'center'}}>
-                          <TouchableOpacity
-                            onPress={()=>openEdit(it)}
-                            style={[styles.rowBtn,{marginRight:8}]}
-                          >
-                            <Text>Edit</Text>
+                        <View style={styles.actionBtns}>
+                          <TouchableOpacity onPress={() => openEdit(it)} style={styles.editBtn}>
+                            <Ionicons name="pencil" size={14} color={PINK.primary} />
                           </TouchableOpacity>
-
-                          <TouchableOpacity
-                            onPress={()=>remove(it)}
-                            style={styles.del}
-                          >
-                            <Text>Delete</Text>
+                          <TouchableOpacity onPress={() => remove(it)} style={styles.delBtn}>
+                            <Ionicons name="trash" size={14} color="#e05070" />
                           </TouchableOpacity>
                         </View>
                       </View>
                     ))
                   )}
                 </View>
-              )
-            })}
-
-            {list.length===0 && (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
-                <Text style={styles.emptySub}>
-                  Empty timetable. กด + เพื่อเพิ่มวิชาเรียน
-                </Text>
-              </View>
-            )}
-
-          </ScrollView>
-        </>
-      ) : (
-        <>
-          <Text style={{fontWeight:'700', marginVertical:8}}>
-            Exam Schedule
-          </Text>
-
-          {/* Scroll เฉพาะ Monday-Sunday */}
-          <ScrollView
-            style={{flex:1}}
+              );
+            }}
+            ListFooterComponent={() =>
+              list.length === 0 ? (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyEmoji}>🌸</Text>
+                  <Text style={styles.emptyTitle}>ยังไม่มีตารางเรียน</Text>
+                  <Text style={styles.emptySub}>กด + เพื่อเพิ่มวิชาเรียน</Text>
+                </View>
+              ) : null
+            }
+          />
+        ) : (
+          <FlatList
+            data={days}
+            keyExtractor={d => d}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{paddingBottom:120}}
-          >
-
-            {days.map(item=>{
-              const items = exams.filter(ex=>ex.date===item)
-
-              return(
-                <View key={item} style={styles.dayBlock}>
-                  <Text style={styles.dayTitle}>{dayNames[item]}</Text>
-
-                  {items.length===0 ? (
-                    <Text style={{opacity:0.6}}>No exams</Text>
+            contentContainerStyle={{ paddingBottom: 120 }}
+            renderItem={({ item }) => {
+              const items = exams.filter(ex => ex.date === item);
+              return (
+                <View style={styles.dayBlock}>
+                  <View style={[styles.dayHeader, { backgroundColor: dayColors[item] || PINK.light }]}>
+                    <Text style={styles.dayEmoji}>{dayEmoji[item]}</Text>
+                    <Text style={styles.dayTitle}>{dayNames[item]}</Text>
+                    <View style={styles.dayBadge}><Text style={styles.dayBadgeText}>{items.length}</Text></View>
+                  </View>
+                  {items.length === 0 ? (
+                    <Text style={styles.emptyDay}>ไม่มีการสอบ</Text>
                   ) : (
-                    items.map(it=>(
-                      <View key={it.id} style={styles.classCard}>
-                        <View>
-                          <Text style={{fontWeight:'600'}}>
-                            {it.title}
-                          </Text>
-
-                          {(it.examDayOfMonth || it.examMonth) &&
-                            <Text>
-                              {it.examDayOfMonth || '-'} / {it.examMonth || '-'}
-                            </Text>
-                          }
-
-                          <Text>
-                            {it.start} - {it.end} • {it.location}
-                          </Text>
+                    items.map(it => (
+                      <View key={it.id} style={[styles.classRow, { borderLeftColor: '#e05070' }]}>
+                        <View style={styles.classRowLeft}>
+                          <Text style={styles.classRowName}>{it.title}</Text>
+                          {(it.examDayOfMonth || it.examMonth) ? (
+                            <Text style={styles.classRowCode}>{it.examDayOfMonth}/{it.examMonth}</Text>
+                          ) : null}
+                          <View style={styles.classTagRow}>
+                            <View style={styles.tag}><Text style={styles.tagText}>🕐 {it.start}–{it.end}</Text></View>
+                            <View style={styles.tag}><Text style={styles.tagText}>📍 {it.location}</Text></View>
+                          </View>
                         </View>
-
-                        <View style={{flexDirection:'row',alignItems:'center'}}>
-                          <TouchableOpacity
-                            onPress={()=>openEditExam(it)}
-                            style={[styles.rowBtn,{marginRight:8}]}
-                          >
-                            <Text>Edit</Text>
+                        <View style={styles.actionBtns}>
+                          <TouchableOpacity onPress={() => openEditExam(it)} style={styles.editBtn}>
+                            <Ionicons name="pencil" size={14} color={PINK.primary} />
                           </TouchableOpacity>
-
-                          <TouchableOpacity
-                            onPress={()=>removeExam(it.id)}
-                            style={styles.del}
-                          >
-                            <Text>Delete</Text>
+                          <TouchableOpacity onPress={() => removeExam(it.id)} style={styles.delBtn}>
+                            <Ionicons name="trash" size={14} color="#e05070" />
                           </TouchableOpacity>
                         </View>
                       </View>
                     ))
                   )}
                 </View>
-              )
-            })}
+              );
+            }}
+            ListFooterComponent={() =>
+              exams.length === 0 ? (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyEmoji}>🎀</Text>
+                  <Text style={styles.emptyTitle}>ยังไม่มีตารางสอบ</Text>
+                  <Text style={styles.emptySub}>กด + เพื่อเพิ่มตารางสอบ</Text>
+                </View>
+              ) : null
+            }
+          />
+        )}
+      </View>
 
-            {exams.length===0 && (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
-                <Text style={styles.emptySub}>
-                  Empty exam schedule. กด + เพื่อเพิ่มตารางสอบ
-                </Text>
+      {/* FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => viewMode === 'classes' ? openAdd() : openAddExam()}
+        accessibilityLabel="Add"
+      >
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Add/Edit Class Modal */}
+      <Modal animationType="slide" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>{editingId ? '✏️ แก้ไขวิชา' : '📚 เพิ่มวิชาเรียน'}</Text>
+
+            <TextInput placeholder="ชื่อวิชา" value={name} onChangeText={setName} style={styles.input} placeholderTextColor="#cca0bb" />
+            <TextInput placeholder="รหัสวิชา" value={code} onChangeText={setCode} style={styles.input} placeholderTextColor="#cca0bb" />
+            <TextInput placeholder="ห้องเรียน" value={room} onChangeText={setRoom} style={styles.input} placeholderTextColor="#cca0bb" />
+
+            {editingId ? (
+              <View style={styles.pickerWrap}>
+                <Picker selectedValue={day} onValueChange={v => setDay(v)}>
+                  {days.map(d => <Picker.Item key={d} label={dayNames[d]} value={d} />)}
+                </Picker>
+              </View>
+            ) : (
+              <View style={styles.multiDayWrap}>
+                <Text style={styles.multiDayLabel}>เลือกวัน (เลือกได้หลายวัน)</Text>
+                <View style={styles.dayChipRow}>
+                  {days.map(d => {
+                    const active = selectedDays.includes(d);
+                    return (
+                      <TouchableOpacity key={d} onPress={() => toggleSelectedDay(d)} style={[styles.dayChip, active && styles.dayChipActive]}>
+                        <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>{d}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             )}
 
-          </ScrollView>
-        </>
-      )}
+            <View style={styles.rowInputs}>
+              <TextInput placeholder="วันที่ (1-31)" value={classDate} onChangeText={setClassDate} keyboardType="number-pad" style={[styles.input, { flex: 1, marginRight: 6 }]} placeholderTextColor="#cca0bb" />
+              <TextInput placeholder="เดือน" value={classMonth} onChangeText={setClassMonth} style={[styles.input, { flex: 1 }]} placeholderTextColor="#cca0bb" />
+            </View>
 
-    </View>
+            <View style={styles.rowInputs}>
+              <TextInput value={start} onChangeText={setStart} style={[styles.input, { flex: 1, marginRight: 6 }]} />
+              <TextInput value={end} onChangeText={setEnd} style={[styles.input, { flex: 1 }]} />
+            </View>
 
-    {/* Floating + button */}
-    <TouchableOpacity
-      style={styles.fab}
-      onPress={()=> viewMode==='classes' ? openAdd() : openAddExam()}
-      accessibilityLabel="Add"
-    >
-      <Text style={styles.fabText}>+</Text>
-    </TouchableOpacity>
+            <View style={styles.modalBtns}>
+              <Pressable style={[styles.modalBtn, styles.cancelBtn]} onPress={() => { setModalVisible(false); setEditingId(null); }}>
+                <Text style={styles.cancelBtnText}>ยกเลิก</Text>
+              </Pressable>
+              <Pressable style={[styles.modalBtn, styles.saveBtn]} onPress={addClass}>
+                <Text style={styles.saveBtnText}>บันทึก</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
-   
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={modalVisible}
-      onRequestClose={()=>setModalVisible(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+      {/* Add/Edit Exam Modal */}
+      <Modal animationType="slide" transparent visible={examModalVisible} onRequestClose={() => { setExamModalVisible(false); setEditingExamId(null); }}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>{editingExamId ? '✏️ แก้ไขการสอบ' : '📝 เพิ่มตารางสอบ'}</Text>
 
-          <Text style={{fontWeight:'700', marginBottom:8}}>
-            {editingId? 'Edit Class' : 'Add Class'}
-          </Text>
+            <TextInput placeholder="ชื่อวิชาสอบ" value={examTitle} onChangeText={setExamTitle} style={styles.input} placeholderTextColor="#cca0bb" />
+            <TextInput placeholder="สถานที่สอบ" value={examLocation} onChangeText={setExamLocation} style={styles.input} placeholderTextColor="#cca0bb" />
 
-          <TextInput placeholder="Subject name" value={name} onChangeText={setName} style={styles.input}/>
-          <TextInput placeholder="Code" value={code} onChangeText={setCode} style={styles.input}/>
-          <TextInput placeholder="Room" value={room} onChangeText={setRoom} style={styles.input}/>
-
-          {editingId ? (
-            <View style={{borderWidth:1,borderColor:'#eee',borderRadius:6,overflow:'hidden',marginVertical:6}}>
-              <Picker selectedValue={day} onValueChange={v=>setDay(v)}>
-                <Picker.Item label="Monday" value="Mon"/>
-                <Picker.Item label="Tuesday" value="Tue"/>
-                <Picker.Item label="Wednesday" value="Wed"/>
-                <Picker.Item label="Thursday" value="Thu"/>
-                <Picker.Item label="Friday" value="Fri"/>
-                <Picker.Item label="Saturday" value="Sat"/>
-                <Picker.Item label="Sunday" value="Sun"/>
+            <View style={styles.pickerWrap}>
+              <Picker selectedValue={examSubjectId} onValueChange={v => setExamSubjectId(v)}>
+                <Picker.Item label="ไม่เชื่อมกับวิชา" value="" />
+                {list.map(subject => <Picker.Item key={subject.id} label={subject.name} value={subject.id} />)}
               </Picker>
             </View>
-          ) : (
-            <View style={styles.multiDayWrap}>
-              <Text style={styles.multiDayLabel}>Select days (multi-select)</Text>
 
-              <View style={styles.dayChipRow}>
-                {days.map(d=>{
-                  const active = selectedDays.includes(d)
-
-                  return(
-                    <TouchableOpacity
-                      key={d}
-                      onPress={()=>toggleSelectedDay(d)}
-                      style={[styles.dayChip, active && styles.dayChipActive]}
-                    >
-                      <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
-                        {d}
-                      </Text>
-                    </TouchableOpacity>
-                  )
-                })}
-              </View>
+            <View style={styles.pickerWrap}>
+              <Picker selectedValue={examDate} onValueChange={v => setExamDate(v)}>
+                {days.map(d => <Picker.Item key={d} label={dayNames[d]} value={d} />)}
+              </Picker>
             </View>
-          )}
 
-          <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-            <TextInput value={start} onChangeText={setStart} style={[styles.input,{flex:1,marginRight:6}]}/>
-            <TextInput value={end} onChangeText={setEnd} style={[styles.input,{flex:1}]}/>
+            <View style={styles.rowInputs}>
+              <TextInput placeholder="วันที่ (1-31)" value={examDayOfMonth} onChangeText={setExamDayOfMonth} keyboardType="number-pad" style={[styles.input, { flex: 1, marginRight: 6 }]} placeholderTextColor="#cca0bb" />
+              <TextInput placeholder="เดือน" value={examMonth} onChangeText={setExamMonth} style={[styles.input, { flex: 1 }]} placeholderTextColor="#cca0bb" />
+            </View>
+
+            <View style={styles.rowInputs}>
+              <TextInput value={examStart} onChangeText={setExamStart} style={[styles.input, { flex: 1, marginRight: 6 }]} />
+              <TextInput value={examEnd} onChangeText={setExamEnd} style={[styles.input, { flex: 1 }]} />
+            </View>
+
+            <View style={styles.modalBtns}>
+              <Pressable style={[styles.modalBtn, styles.cancelBtn]} onPress={() => { setExamModalVisible(false); setEditingExamId(null); }}>
+                <Text style={styles.cancelBtnText}>ยกเลิก</Text>
+              </Pressable>
+              <Pressable style={[styles.modalBtn, styles.saveBtn]} onPress={addExam}>
+                <Text style={styles.saveBtnText}>บันทึก</Text>
+              </Pressable>
+            </View>
           </View>
-
-          <View style={{flexDirection:'row',marginTop:12}}>
-            <Pressable style={[styles.modalBtn,{backgroundColor:'#ccc'}]} onPress={()=>{setModalVisible(false);setEditingId(null)}}>
-              <Text>Cancel</Text>
-            </Pressable>
-
-            <Pressable style={[styles.modalBtn,{backgroundColor:'#b96aa2'}]} onPress={addClass}>
-              <Text style={{color:'#fff'}}>Save</Text>
-            </Pressable>
-          </View>
-
         </View>
-      </View>
-    </Modal>
-
-    
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={examModalVisible}
-      onRequestClose={()=>{setExamModalVisible(false);setEditingExamId(null)}}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-
-          <Text style={{fontWeight:'700', marginBottom:8}}>
-            {editingExamId? 'Edit Exam' : 'Add Exam'}
-          </Text>
-
-          <TextInput placeholder="Title" value={examTitle} onChangeText={setExamTitle} style={styles.input}/>
-          <TextInput placeholder="Location" value={examLocation} onChangeText={setExamLocation} style={styles.input}/>
-
-          <View style={{borderWidth:1,borderColor:'#eee',borderRadius:6,overflow:'hidden',marginVertical:6,backgroundColor:'#fff'}}>
-            <Picker selectedValue={examSubjectId} onValueChange={v=>setExamSubjectId(v)}>
-              <Picker.Item label="Not linked to subject" value=""/>
-              {list.map(subject=>(
-                <Picker.Item key={subject.id} label={subject.name} value={subject.id}/>
-              ))}
-            </Picker>
-          </View>
-
-          <View style={{borderWidth:1,borderColor:'#eee',borderRadius:6,overflow:'hidden',marginVertical:6}}>
-            <Picker selectedValue={examDate} onValueChange={v=>setExamDate(v)}>
-              <Picker.Item label="Monday" value="Mon"/>
-              <Picker.Item label="Tuesday" value="Tue"/>
-              <Picker.Item label="Wednesday" value="Wed"/>
-              <Picker.Item label="Thursday" value="Thu"/>
-              <Picker.Item label="Friday" value="Fri"/>
-              <Picker.Item label="Saturday" value="Sat"/>
-              <Picker.Item label="Sunday" value="Sun"/>
-            </Picker>
-          </View>
-
-          <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-            <TextInput
-              placeholder="Date (1-31)"
-              value={examDayOfMonth}
-              onChangeText={setExamDayOfMonth}
-              keyboardType="number-pad"
-              style={[styles.input,{flex:1,marginRight:6}]}
-            />
-            <TextInput
-              placeholder="Month"
-              value={examMonth}
-              onChangeText={setExamMonth}
-              style={[styles.input,{flex:1}]}
-            />
-          </View>
-
-          <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-            <TextInput value={examStart} onChangeText={setExamStart} style={[styles.input,{flex:1,marginRight:6}]}/>
-            <TextInput value={examEnd} onChangeText={setExamEnd} style={[styles.input,{flex:1}]}/>
-          </View>
-
-          <View style={{flexDirection:'row',marginTop:12}}>
-            <Pressable style={[styles.modalBtn,{backgroundColor:'#ccc'}]} onPress={()=>{setExamModalVisible(false);setEditingExamId(null)}}>
-              <Text>Cancel</Text>
-            </Pressable>
-
-            <Pressable style={[styles.modalBtn,{backgroundColor:'#b96aa2'}]} onPress={addExam}>
-              <Text style={{color:'#fff'}}>Save</Text>
-            </Pressable>
-          </View>
-
-        </View>
-      </View>
-    </Modal>
-
-  </View>
-)
+      </Modal>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  container:{flex:1, padding:16, backgroundColor:'#fff4fb'},
-  header:{marginTop:32,marginBottom:16,fontSize:18, fontWeight:'700', textAlign:'center'},
-  input:{borderWidth:1, borderColor:'#eee', padding:8, borderRadius:6, marginVertical:6, backgroundColor:'#fff'},
-  dayBlock:{paddingVertical:8, borderBottomWidth:1, borderColor:'#f0dff0'},
-  dayTitle:{fontWeight:'700', marginBottom:6},
-  classRow:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingVertical:6},
-  emptyCard:{marginTop:16, padding:14, borderRadius:10, borderWidth:1, borderColor:'#f0dff0', backgroundColor:'#fff', alignItems:'center'},
-  emptyTitle:{fontSize:16, fontWeight:'700', color:'#6b3550'},
-  emptySub:{marginTop:4, fontSize:13, color:'#7f6b78', textAlign:'center'},
-  multiDayWrap:{marginVertical:6},
-  multiDayLabel:{fontSize:12, color:'#6b3550', marginBottom:6},
-  dayChipRow:{flexDirection:'row', flexWrap:'wrap'},
-  dayChip:{paddingVertical:6, paddingHorizontal:10, borderRadius:14, borderWidth:1, borderColor:'#e8cde0', marginRight:8, marginBottom:8, backgroundColor:'#fff'},
-  dayChipActive:{backgroundColor:'#b96aa2', borderColor:'#b96aa2'},
-  dayChipText:{fontSize:12, color:'#6b3550', fontWeight:'600'},
-  dayChipTextActive:{color:'#fff'},
-  del:{padding:6},
-  fab:{position:'absolute', right:18, bottom:88, width:56, height:56, borderRadius:28, backgroundColor:'#d184b8', alignItems:'center', justifyContent:'center', elevation:4, shadowColor:'#000', shadowOffset:{width:0,height:2}, shadowOpacity:0.2, shadowRadius:4},
-  fabText:{color:'#fff', fontSize:28, lineHeight:30},
-  modalOverlay:{flex:1, backgroundColor:'rgba(0,0,0,0.4)', justifyContent:'flex-end'},
-  modalContent:{backgroundColor:'#fff', padding:16, borderTopLeftRadius:12, borderTopRightRadius:12},
-  modalBtn:{flex:1, padding:12, borderRadius:8, alignItems:'center', marginHorizontal:6}
-  ,segControl:{flexDirection:'row', backgroundColor:'#fff', borderRadius:8, overflow:'hidden', marginVertical:8}
-  ,segBtn:{flex:1, padding:10, alignItems:'center'}
-  ,segActive:{backgroundColor:'#b96aa2'}
-  ,examRow:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingVertical:10, borderBottomWidth:1, borderColor:'#f6e6f1'}
-  ,rowBtn:{padding:6},
-  classCard:{
-  backgroundColor:"#f0dff0",
-  borderRadius:12,
-  padding:12,
-  marginVertical:3,
-  flexDirection:"row",
-  justifyContent:"space-between",
-  alignItems:"center",
-  elevation:1
-}
+  container: { flex: 1, backgroundColor: PINK.bg },
+  headerBand: {
+    backgroundColor: PINK.primary,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: PINK.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    marginBottom: 8,
+  },
+  appTitle: { fontSize: 20, fontWeight: '800', color: '#fff', letterSpacing: 1 },
+  segControl: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: PINK.border,
+  },
+  segBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  segActive: { backgroundColor: PINK.light },
+  segText: { fontSize: 13, fontWeight: '600', color: PINK.sub },
+  segTextActive: { color: PINK.primary },
+  dayBlock: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    marginBottom: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: PINK.border,
+    shadowColor: PINK.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  dayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    gap: 8,
+  },
+  dayEmoji: { fontSize: 18 },
+  dayTitle: { fontWeight: '700', fontSize: 14, color: PINK.text, flex: 1 },
+  dayBadge: {
+    backgroundColor: 'rgba(212,96,154,0.15)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  dayBadgeText: { fontSize: 11, fontWeight: '700', color: PINK.primary },
+  emptyDay: { padding: 12, fontSize: 12, color: '#ccc', textAlign: 'center' },
+  classRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: PINK.border,
+    borderLeftWidth: 3,
+    borderLeftColor: PINK.medium,
+  },
+  classRowLeft: { flex: 1 },
+  classRowName: { fontWeight: '700', fontSize: 13, color: PINK.text },
+  classRowCode: { fontSize: 11, color: PINK.sub, marginTop: 1 },
+  classTagRow: { flexDirection: 'row', gap: 6, marginTop: 5 },
+  tag: { backgroundColor: PINK.light, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  tagText: { fontSize: 10, color: PINK.dark, fontWeight: '600' },
+  actionBtns: { flexDirection: 'row', gap: 8 },
+  editBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: PINK.light,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  delBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#ffe8ef',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  emptyCard: {
+    margin: 10, padding: 20, borderRadius: 14,
+    borderWidth: 1, borderColor: PINK.border,
+    backgroundColor: '#fff', alignItems: 'center',
+  },
+  emptyEmoji: { fontSize: 32, marginBottom: 6 },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: PINK.text },
+  emptySub: { marginTop: 4, fontSize: 12, color: PINK.sub, textAlign: 'center' },
+  fab: {
+    position: 'absolute', right: 18, bottom: 88,
+    width: 54, height: 54, borderRadius: 27,
+    backgroundColor: PINK.primary,
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 6,
+    shadowColor: PINK.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  modalHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: '#e0c0d0',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: { fontSize: 16, fontWeight: '700', color: PINK.text, marginBottom: 12 },
+  input: {
+    borderWidth: 1.5, borderColor: PINK.border,
+    padding: 10, borderRadius: 10,
+    marginVertical: 5, backgroundColor: PINK.bg,
+    color: PINK.text, fontSize: 14,
+  },
+  pickerWrap: {
+    borderWidth: 1.5, borderColor: PINK.border,
+    borderRadius: 10, overflow: 'hidden',
+    marginVertical: 5, backgroundColor: '#fff',
+  },
+  multiDayWrap: { marginVertical: 8 },
+  multiDayLabel: { fontSize: 12, color: PINK.sub, marginBottom: 8, fontWeight: '600' },
+  dayChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  dayChip: {
+    paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14,
+    borderWidth: 1.5, borderColor: PINK.border, backgroundColor: '#fff',
+  },
+  dayChipActive: { backgroundColor: PINK.primary, borderColor: PINK.primary },
+  dayChipText: { fontSize: 12, color: PINK.sub, fontWeight: '600' },
+  dayChipTextActive: { color: '#fff' },
+  rowInputs: { flexDirection: 'row', justifyContent: 'space-between' },
+  modalBtns: { flexDirection: 'row', marginTop: 14, gap: 10 },
+  modalBtn: { flex: 1, padding: 13, borderRadius: 12, alignItems: 'center' },
+  cancelBtn: { backgroundColor: '#f3eaf0' },
+  saveBtn: { backgroundColor: PINK.primary },
+  cancelBtnText: { color: PINK.sub, fontWeight: '700' },
+  saveBtnText: { color: '#fff', fontWeight: '700' },
 });

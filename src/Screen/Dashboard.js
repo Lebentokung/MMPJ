@@ -1,6 +1,19 @@
 import React, { useContext, useMemo, useState } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ScrollView, Modal, TextInput, Pressable } from "react-native";
 import { Usercontext } from "../context/Usercontext";
+import { Ionicons } from '@expo/vector-icons';
+
+const PINK = {
+  primary: '#d4609a',
+  light: '#fce8f5',
+  medium: '#f0aed4',
+  dark: '#8c2f60',
+  bg: '#fff8fc',
+  card: '#fff',
+  border: '#f5d0e8',
+  text: '#5a1f40',
+  sub: '#9e6080',
+};
 
 const DashboardScreen = () => {
   const { timetable, exams, plannerActivities, studyPlans, savePlannerActivities, saveStudyPlans } = useContext(Usercontext);
@@ -63,7 +76,6 @@ const DashboardScreen = () => {
     return date;
   }
 
-
   function isDateInRange(date, start, end) {
     return date && date >= start && date <= end;
   }
@@ -115,8 +127,6 @@ const DashboardScreen = () => {
 
   // all planner activities, sorted by upcoming date regardless of filter period
   const allPlannerActivities = useMemo(() => {
-    const dayOrder = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
-
     return plannerActivities
       .map(item => ({
         ...item,
@@ -179,149 +189,184 @@ const DashboardScreen = () => {
     setQuickAddVisible(false);
   }
 
+  const dayIconMap = { Mon: '🟨', Tue: '⬜', Wed: '🟩', Thu: '🟧', Fri: '🟦', Sat: '🟪', Sun: '🟥' };
+
   return (
-    <View style={{ flex: 1, padding:15,backgroundColor:'#fff4fb' }}>
-      <View style={{ flex: 1 }}>
-
-
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerBand}>
+        <Text style={styles.appTitle}>✦ Dashboard</Text>
         <Text style={styles.todayDate}>{formatDate(now)}</Text>
+      </View>
 
-        <View style={styles.filterRow}>
-          <FilterButton label="วันนี้" active={period === "today"} onPress={() => setPeriod("today")} />
-          <FilterButton label="สัปดาห์หน้า" active={period === "nextWeek"} onPress={() => setPeriod("nextWeek")} />
-          <FilterButton label="เดือนหน้า" active={period === "nextMonth"} onPress={() => setPeriod("nextMonth")} />
-        </View>
+      {/* Period Filter */}
+      <View style={styles.filterRow}>
+        {[
+          { key: "today", label: "วันนี้" },
+          { key: "nextWeek", label: "สัปดาห์หน้า" },
+          { key: "nextMonth", label: "เดือนหน้า" },
+        ].map(btn => (
+          <TouchableOpacity
+            key={btn.key}
+            style={[styles.filterBtn, period === btn.key && styles.filterBtnActive]}
+            onPress={() => setPeriod(btn.key)}
+          >
+            <Text style={[styles.filterText, period === btn.key && styles.filterTextActive]}>
+              {btn.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-        <Text style={styles.summaryLabel}>สรุปข้อมูล: {filterLabel}</Text>
-
-        <View style={styles.dashboardTabRow}>
-          <FilterButton
-            label="วิชาเรียน"
-            active={dashboardTab === "classes"}
-            onPress={() => setDashboardTab("classes")}
-          />
-          <FilterButton
-            label="ตารางสอบ"
-            active={dashboardTab === "exams"}
-            onPress={() => setDashboardTab("exams")}
-          />
-        </View>
-        <ScrollView
-          
+      {/* Content Tab Row */}
+      <View style={styles.dashboardTabRow}>
+        <TouchableOpacity
+          style={[styles.tabPill, dashboardTab === "classes" && styles.tabPillActive]}
+          onPress={() => setDashboardTab("classes")}
         >
+          <Ionicons name="book-outline" size={14} color={dashboardTab === "classes" ? "#fff" : PINK.primary} />
+          <Text style={[styles.tabPillText, dashboardTab === "classes" && styles.tabPillTextActive]}>วิชาเรียน</Text>
+        </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[styles.tabPill, dashboardTab === "exams" && styles.tabPillActive]}
+          onPress={() => setDashboardTab("exams")}
+        >
+          <Ionicons name="document-text-outline" size={14} color={dashboardTab === "exams" ? "#fff" : PINK.primary} />
+          <Text style={[styles.tabPillText, dashboardTab === "exams" && styles.tabPillTextActive]}>ตารางสอบ</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView>
+        <View style={styles.splitContainer}>
 
           {dashboardTab === "classes" ? (
             <>
-              <Text style={styles.header}>วิชาเรียน</Text>
-
+              <Text style={styles.sectionTitle}>
+                <Ionicons name="school-outline" size={15} color={PINK.dark} /> วิชาเรียน — {filterLabel}
+              </Text>
               {filteredClasses.length > 0 ? (
                 <FlatList
                   data={filteredClasses}
                   keyExtractor={(item) => item.id}
                   scrollEnabled={false}
                   renderItem={({ item }) => (
-                    <View style={styles.classItem}>
-                      <Text style={styles.classText}>{item.name}</Text>
-                      <Text style={styles.subText}>
-                        {getDayCodeFromDate(item.occurrence)} • {item.occurrence.toLocaleDateString("th-TH")}
-                      </Text>
-                      <Text style={styles.detail}>{item.start} - {item.end}</Text>
-                      <Text style={styles.detail}>Room: {item.room}</Text>
+                    <View style={styles.classCard}>
+                      <View style={styles.classCardLeft}>
+                        <Text style={styles.dayEmoji}>{dayIconMap[item.day] || '📖'}</Text>
+                      </View>
+                      <View style={styles.classCardRight}>
+                        <Text style={styles.className}>{item.name}</Text>
+                        <Text style={styles.classDetail}>{getDayCodeFromDate(item.occurrence)} · {item.occurrence.toLocaleDateString("th-TH")}</Text>
+                        <View style={styles.classTagRow}>
+                          <View style={styles.tag}><Text style={styles.tagText}>🕐 {item.start}–{item.end}</Text></View>
+                          <View style={styles.tag}><Text style={styles.tagText}>📍 {item.room}</Text></View>
+                        </View>
+                      </View>
                     </View>
                   )}
                 />
               ) : (
                 <View style={styles.emptyCard}>
-                  <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
-                  <Text style={styles.noClasses}>Empty class schedule ({filterLabel})</Text>
+                  <Text style={styles.emptyEmoji}>🌸</Text>
+                  <Text style={styles.emptyTitle}>ไม่มีคลาสเรียน</Text>
+                  <Text style={styles.emptyText}>{filterLabel}นี้ว่างอยู่นะ</Text>
                 </View>
               )}
             </>
           ) : (
             <>
-              <Text style={styles.header}>ตารางสอบ</Text>
-
+              <Text style={styles.sectionTitle}>
+                <Ionicons name="clipboard-outline" size={15} color={PINK.dark} /> ตารางสอบ — {filterLabel}
+              </Text>
               {filteredExams.length > 0 ? (
                 <FlatList
                   data={filteredExams}
                   keyExtractor={(item) => item.id}
                   scrollEnabled={false}
                   renderItem={({ item }) => (
-                    <View style={styles.classItem}>
-                      <Text style={styles.classText}>{item.title}</Text>
-                      <Text style={styles.subText}>
-                        {getDayCodeFromDate(item.occurrence)} • {item.occurrence.toLocaleDateString("th-TH")}
-                      </Text>
-                      <Text style={styles.detail}>{item.start} - {item.end}</Text>
-                      <Text style={styles.detail}>Location: {item.location}</Text>
+                    <View style={[styles.classCard, styles.examCard]}>
+                      <View style={[styles.classCardLeft, { backgroundColor: '#ffd6eb' }]}>
+                        <Text style={styles.dayEmoji}>📝</Text>
+                      </View>
+                      <View style={styles.classCardRight}>
+                        <Text style={styles.className}>{item.title}</Text>
+                        <Text style={styles.classDetail}>{getDayCodeFromDate(item.occurrence)} · {item.occurrence.toLocaleDateString("th-TH")}</Text>
+                        <View style={styles.classTagRow}>
+                          <View style={styles.tag}><Text style={styles.tagText}>🕐 {item.start}–{item.end}</Text></View>
+                          <View style={styles.tag}><Text style={styles.tagText}>📍 {item.location}</Text></View>
+                        </View>
+                      </View>
                     </View>
                   )}
                 />
               ) : (
                 <View style={styles.emptyCard}>
-                  <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
-                  <Text style={styles.noClasses}>Empty exam schedule ({filterLabel})</Text>
+                  <Text style={styles.emptyEmoji}>🎀</Text>
+                  <Text style={styles.emptyTitle}>ไม่มีตารางสอบ</Text>
+                  <Text style={styles.emptyText}>{filterLabel}นี้ว่างอยู่</Text>
                 </View>
               )}
             </>
           )}
 
-          {/* study plans */}
-          <Text style={styles.header}>แผนการเรียน</Text>
-
+          {/* Study Plans */}
+          <Text style={styles.sectionTitle}>
+            <Ionicons name="bookmark-outline" size={15} color={PINK.dark} /> แผนการเรียน
+          </Text>
           {studyPlans?.length > 0 ? (
             <FlatList
               data={studyPlans}
-              keyExtractor={(item) => item.id}
+              keyExtractor={item => item.id}
               scrollEnabled={false}
               renderItem={({ item }) => (
-                <View style={styles.classItem}>
-                  <Text style={styles.classText}>{item.subject}</Text>
-                  <Text style={styles.subText}>{item.topic}</Text>
-                  <Text style={styles.detail}>
-                    {item.date} | {item.time}
-                  </Text>
+                <View style={styles.planCard}>
+                  <View style={styles.planDot} />
+                  <View>
+                    <Text style={styles.planSubject}>{item.subject}</Text>
+                    <Text style={styles.planTopic}>{item.topic}</Text>
+                    <Text style={styles.planDetail}>{item.date} · {item.time}</Text>
+                  </View>
                 </View>
               )}
+              contentContainerStyle={{ paddingBottom: 8 }}
             />
           ) : (
             <View style={styles.emptyCard}>
+              <Text style={styles.emptyEmoji}>💭</Text>
               <Text style={styles.emptyTitle}>ยังไม่มีแผนการเรียน</Text>
             </View>
           )}
 
-          {/* activities */}
-          <Text style={styles.header}>กิจกรรมทั้งหมด</Text>
-
+          {/* Planner Activities */}
+          <Text style={styles.sectionTitle}>
+            <Ionicons name="calendar-outline" size={15} color={PINK.dark} /> กิจกรรมทั้งหมด
+          </Text>
           {allPlannerActivities?.length > 0 ? (
             <FlatList
               data={allPlannerActivities}
-              keyExtractor={(item) => item.id}
+              keyExtractor={item => item.id}
               scrollEnabled={false}
               renderItem={({ item }) => (
-                <View style={styles.classItem}>
-                  <Text style={styles.classText}>{item.name}</Text>
-                  <Text style={styles.subText}>
-                    {getDayCodeFromDate(item.occurrence)} • {item.occurrence.toLocaleDateString("th-TH")}
-                  </Text>
-                  <Text style={styles.detail}>{item.start} - {item.end}</Text>
-                  <Text style={styles.detail}>Room: {item.room}</Text>
+                <View style={styles.activityCard}>
+                  <Text style={styles.activityName}>{item.name}</Text>
+                  <Text style={styles.classDetail}>{getDayCodeFromDate(item.occurrence)} · {item.occurrence.toLocaleDateString("th-TH")}</Text>
+                  <Text style={styles.classDetail}>{item.start}–{item.end} · {item.room}</Text>
                 </View>
               )}
             />
           ) : (
             <View style={styles.emptyCard}>
+              <Text style={styles.emptyEmoji}>🌷</Text>
               <Text style={styles.emptyTitle}>ไม่มีกิจกรรม</Text>
             </View>
           )}
 
-
-        </ScrollView>
-      </View>
+        </View>
+      </ScrollView>
 
       <TouchableOpacity style={styles.fab} onPress={() => setQuickAddVisible(true)}>
-        <Text style={styles.fabLabel}>+</Text>
+        <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
       <Modal visible={quickAddVisible} animationType="slide" transparent onRequestClose={() => setQuickAddVisible(false)}>
@@ -344,7 +389,7 @@ const DashboardScreen = () => {
               >
                 <Text>ยกเลิก</Text>
               </Pressable>
-              <Pressable style={[styles.modalBtn, { backgroundColor: "#b96aa2" }]} onPress={quickAddActivity}>
+              <Pressable style={[styles.modalBtn, { backgroundColor: PINK.primary }]} onPress={quickAddActivity}>
                 <Text style={{ color: "#fff" }}>บันทึก</Text>
               </Pressable>
             </View>
@@ -365,119 +410,287 @@ function FilterButton({ label, active, onPress }) {
 
 const styles = StyleSheet.create({
   container: {
-    
-    padding: 20,
-    backgroundColor: "#fff4fb",
+    flex: 1,
+    backgroundColor: PINK.bg,
+  },
+  headerBand: {
+    backgroundColor: PINK.primary,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: PINK.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    marginBottom: 8,
+  },
+  appTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 1,
   },
   todayDate: {
-    marginTop: 30,
-    marginBottom: 16,
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: "#6b3550",
-    marginBottom: 10,
-    textAlign: "center",
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 4,
   },
   filterRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 14,
     gap: 8,
   },
   filterBtn: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: "#e2d2de",
-    borderRadius: 10,
-    paddingVertical: 8,
-    alignItems: "center",
-    backgroundColor: "#faf5f8",
+    borderWidth: 1.5,
+    borderColor: PINK.border,
+    borderRadius: 20,
+    paddingVertical: 7,
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
   filterBtnActive: {
-    backgroundColor: "#b96aa2",
-    borderColor: "#b96aa2",
+    backgroundColor: PINK.primary,
+    borderColor: PINK.primary,
   },
   filterText: {
-    color: "#6b3550",
-    fontWeight: "600",
-    fontSize: 12,
+    color: PINK.sub,
+    fontWeight: '600',
+    fontSize: 11,
   },
   filterTextActive: {
-    color: "#fff",
-  },
-  summaryLabel: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 10,
+    color: '#fff',
   },
   dashboardTabRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 8,
-    marginBottom: 12,
-  },
-  header: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  classItem: {
-    padding: 15,
-    marginBottom: 5,
-    backgroundColor: "#f0dff0",
-    borderRadius: 8,
-    elevation: 1
-  },
-  classText: {
-    fontSize: 16,
-    fontWeight: '600'
-  },
-  subText: {
-    fontSize: 12,
-    color: "#666",
-    marginVertical: 2,
-    fontWeight: '500'
-  },
-  noClasses: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
-    marginTop: 4,
-  },
-  emptyCard: {
-    marginBottom: 12,
-    backgroundColor: "#f0dff0",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#eee",
-    padding: 14,
-    alignItems: "center",
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#444",
-  },
-  examItem: {
-    padding: 15,
-    marginBottom: 10,
-  },
-  splitContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 12,
     gap: 10,
   },
-
-  card: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderWidth: 1, borderColor: '#eee', borderRadius: 8, marginVertical: 6, backgroundColor: '#f0dff0', elevation: 1 },
-  subject: { fontWeight: '700', fontSize: 16 },
-  topic: { marginTop: 4, color: '#444' },
-  detail: { marginTop: 2, fontSize: 12, color: '#888' },
-  modalContainer: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  modalBox: { backgroundColor: '#fff', margin: 20, padding: 16, borderRadius: 8 },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
-  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  modalBtn: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center', marginHorizontal: 6 },
-  quickInput: { borderWidth: 1, borderColor: '#eee', padding: 10, borderRadius: 6, marginTop: 4, backgroundColor: '#fff' },
-  fab: { position: 'absolute', right: 18, bottom: 88, width: 56, height: 56, borderRadius: 28, backgroundColor: '#d184b8', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
-  fabLabel: { color: '#fff', fontSize: 28, fontWeight: '700', lineHeight: 30 },
+  tabPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    borderRadius: 20,
+    paddingVertical: 8,
+    borderWidth: 1.5,
+    borderColor: PINK.border,
+    backgroundColor: '#fff',
+  },
+  tabPillActive: {
+    backgroundColor: PINK.primary,
+    borderColor: PINK.primary,
+  },
+  tabPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: PINK.primary,
+  },
+  tabPillTextActive: {
+    color: '#fff',
+  },
+  splitContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 100,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: PINK.dark,
+    marginBottom: 8,
+    marginTop: 4,
+    letterSpacing: 0.3,
+  },
+  classCard: {
+    flexDirection: 'row',
+    backgroundColor: PINK.card,
+    borderRadius: 14,
+    marginBottom: 8,
+    overflow: 'hidden',
+    shadowColor: PINK.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: PINK.border,
+  },
+  examCard: {
+    borderColor: '#ffc2dd',
+  },
+  classCardLeft: {
+    width: 52,
+    backgroundColor: PINK.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayEmoji: {
+    fontSize: 22,
+  },
+  classCardRight: {
+    flex: 1,
+    padding: 10,
+  },
+  className: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: PINK.text,
+  },
+  classDetail: {
+    fontSize: 11,
+    color: PINK.sub,
+    marginTop: 2,
+  },
+  classTagRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 6,
+  },
+  tag: {
+    backgroundColor: PINK.light,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  tagText: {
+    fontSize: 10,
+    color: PINK.dark,
+    fontWeight: '600',
+  },
+  emptyCard: {
+    marginBottom: 10,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: PINK.border,
+    padding: 16,
+    alignItems: 'center',
+  },
+  emptyEmoji: {
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: PINK.text,
+  },
+  emptyText: {
+    fontSize: 12,
+    color: PINK.sub,
+    marginTop: 2,
+  },
+  planCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 6,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: PINK.border,
+    gap: 10,
+  },
+  planDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: PINK.primary,
+    marginTop: 4,
+  },
+  planSubject: {
+    fontWeight: '700',
+    fontSize: 13,
+    color: PINK.text,
+  },
+  planTopic: {
+    fontSize: 12,
+    color: PINK.sub,
+    marginTop: 2,
+  },
+  planDetail: {
+    fontSize: 11,
+    color: '#b0b0b0',
+    marginTop: 2,
+  },
+  activityCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 6,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: PINK.border,
+    borderLeftWidth: 4,
+    borderLeftColor: PINK.medium,
+  },
+  activityName: {
+    fontWeight: '700',
+    fontSize: 13,
+    color: PINK.text,
+  },
+  fab: {
+    position: 'absolute',
+    right: 18,
+    bottom: 88,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: PINK.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: PINK.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  modalBox: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    gap: 14,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: PINK.text,
+    marginBottom: 4,
+  },
+  quickInput: {
+    borderWidth: 1.5,
+    borderColor: PINK.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: PINK.text,
+    backgroundColor: PINK.bg,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  modalBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 export default DashboardScreen;
