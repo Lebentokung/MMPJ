@@ -10,6 +10,7 @@ import {
   Modal,
   Pressable,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -28,7 +29,7 @@ const PINK = {
 };
 
 const ProfileScreen = () => {
-  const { profile, saveProfile, resetAppDataExceptProfile } = useContext(Usercontext);
+  const { profile, updateUserProfile, resetAppDataExceptProfile, logoutUser } = useContext(Usercontext);
 
   const [editStudentId, setEditStudentId] = useState("");
   const [editName, setEditName] = useState("");
@@ -38,6 +39,7 @@ const ProfileScreen = () => {
   const [editAvatar, setEditAvatar] = useState(null);
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const openEditModal = () => {
     setEditStudentId(profile.studentId);
@@ -68,8 +70,9 @@ const ProfileScreen = () => {
     }
   };
 
-  const handleSave = () => {
-    saveProfile({
+  const handleSave = async () => {
+    setLoading(true);
+    const result = await updateUserProfile({
       studentId: editStudentId,
       name: editName,
       email: editEmail,
@@ -77,9 +80,30 @@ const ProfileScreen = () => {
       faculty: editFaculty,
       avatar: editAvatar,
     });
+    setLoading(false);
 
-    setModalVisible(false);
-    Alert.alert("บันทึกข้อมูลเรียบร้อย");
+    if (result.success) {
+      setModalVisible(false);
+      Alert.alert("สำเร็จ", "บันทึกข้อมูลเรียบร้อย");
+    } else {
+      Alert.alert("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert("ออกจากระบบ", "ต้องการออกจากระบบหรือไม่?", [
+      { text: "ยกเลิก", style: "cancel" },
+      {
+        text: "ออกจากระบบ",
+        style: "destructive",
+        onPress: async () => {
+          const result = await logoutUser();
+          if (result.success) {
+            Alert.alert("สำเร็จ", "ออกจากระบบเรียบร้อย");
+          }
+        },
+      },
+    ]);
   };
 
   const handleDelete = () => {
@@ -153,6 +177,11 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={16} color="#fff" />
+          <Text style={styles.logoutBtnText}>ออกจากระบบ</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
           <Ionicons name="trash-outline" size={16} color="#e05070" />
           <Text style={styles.deleteBtnText}>ลบข้อมูลทั้งหมด</Text>
@@ -187,8 +216,16 @@ const ProfileScreen = () => {
               <Pressable style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setModalVisible(false)}>
                 <Text style={styles.cancelBtnText}>ยกเลิก</Text>
               </Pressable>
-              <Pressable style={[styles.modalBtn, styles.saveBtn]} onPress={handleSave}>
-                <Text style={styles.saveBtnText}>บันทึก</Text>
+              <Pressable 
+                style={[styles.modalBtn, styles.saveBtn, loading && { opacity: 0.6 }]} 
+                onPress={handleSave}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.saveBtnText}>บันทึก</Text>
+                )}
               </Pressable>
             </View>
           </View>
@@ -319,6 +356,23 @@ const ProfileScreen = () => {
     elevation: 4,
   },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  logoutButton: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: '#ff8c42',
+    shadowColor: '#ff8c42',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  logoutBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   deleteButton: {
     marginHorizontal: 20,
     marginTop: 12,

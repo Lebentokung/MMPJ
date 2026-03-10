@@ -1,17 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
     View,
     Text,
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    Alert
+    Alert,
+    ActivityIndicator
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Usercontext } from "../context/Usercontext";
 
-export default function App() {
+export default function Register({ onAuthSuccess }) {
+
+    const { registerUser, loginUser } = useContext(Usercontext);
 
     const [isLoginMode, setIsLoginMode] = useState(true)
+    const [loading, setLoading] = useState(false)
 
     const [studentId, setStudentId] = useState("")
     const [name, setName] = useState("")
@@ -21,7 +26,7 @@ export default function App() {
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
 
-    const handleAuth = () => {
+    const handleAuth = async () => {
 
         if (isLoginMode) {
 
@@ -30,7 +35,22 @@ export default function App() {
                 return
             }
 
-            Alert.alert("สำเร็จ", "เข้าสู่ระบบสำเร็จ (Demo)")
+            setLoading(true)
+            const result = await loginUser(email, password)
+            setLoading(false)
+
+            if (result.success) {
+                Alert.alert("สำเร็จ", "เข้าสู่ระบบสำเร็จ")
+                if (onAuthSuccess) onAuthSuccess()
+            } else {
+                let errorMsg = "เกิดข้อผิดพลาด"
+                if (result.error.includes("invalid-credential")) {
+                    errorMsg = "Email หรือ Password ไม่ถูกต้อง"
+                } else if (result.error.includes("user-not-found")) {
+                    errorMsg = "ไม่พบผู้ใช้นี้"
+                }
+                Alert.alert("ผิดพลาด", errorMsg)
+            }
         }
 
         else {
@@ -45,7 +65,35 @@ export default function App() {
                 return
             }
 
-            Alert.alert("สำเร็จ", "สมัครสมาชิกสำเร็จ (Demo)")
+            if (password.length < 6) {
+                Alert.alert("แจ้งเตือน", "Password ต้องมีอย่างน้อย 6 ตัวอักษร")
+                return
+            }
+
+            setLoading(true)
+            const result = await registerUser(email, password, {
+                studentId,
+                name,
+                email,
+                year,
+                faculty,
+            })
+            setLoading(false)
+
+            if (result.success) {
+                Alert.alert("สำเร็จ", "สมัครสมาชิกสำเร็จ")
+                if (onAuthSuccess) onAuthSuccess()
+            } else {
+                let errorMsg = "เกิดข้อผิดพลาด"
+                if (result.error.includes("email-already-in-use")) {
+                    errorMsg = "Email นี้ถูกใช้งานแล้ว"
+                } else if (result.error.includes("invalid-email")) {
+                    errorMsg = "รูปแบบ Email ไม่ถูกต้อง"
+                } else if (result.error.includes("weak-password")) {
+                    errorMsg = "Password ไม่ปลอดภัยพอ"
+                }
+                Alert.alert("ผิดพลาด", errorMsg)
+            }
         }
     }
 
@@ -143,10 +191,18 @@ export default function App() {
 
                 )}
 
-                <TouchableOpacity style={styles.button} onPress={handleAuth}>
-                    <Text style={styles.buttonText}>
-                        {isLoginMode ? "Login" : "Register"}
-                    </Text>
+                <TouchableOpacity 
+                    style={[styles.button, loading && { opacity: 0.6 }]} 
+                    onPress={handleAuth}
+                    disabled={loading}
+                >
+                    {loading ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={styles.buttonText}>
+                            {isLoginMode ? "Login" : "Register"}
+                        </Text>
+                    )}
                 </TouchableOpacity>
 
                 <TouchableOpacity

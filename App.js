@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import { UserProvider } from './src/context/Usercontext';
+import React, { useState, useContext } from 'react';
+import { SafeAreaView, StyleSheet, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { UserProvider, Usercontext } from './src/context/Usercontext';
 import { Ionicons } from '@expo/vector-icons';
 
 import Register from './src/Screen/Register';
@@ -20,17 +20,26 @@ export default function App(){
 
 function MainApp(){
 
-  const [isAuth, setIsAuth] = useState(false);
+  const { currentUser, loading } = useContext(Usercontext);
   const [tab, setTab] = useState('Profile');
   const [plannerAddRequest, setPlannerAddRequest] = useState(false);
 
-  // if(!isAuth){
-  //   return (
-  //     <SafeAreaView style={{flex:1}}>
-  //       <Register onRegisterSuccess={() => setIsAuth(true)} />
-  //     </SafeAreaView>
-  //   );
-  // }
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#d4609a" />
+        <Text style={{ marginTop: 10, color: '#999' }}>กำลังโหลด...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <SafeAreaView style={{ flex: 1 }}>
+        <Register onAuthSuccess={() => setTab('Profile')} />
+      </SafeAreaView>
+    );
+  }
 
   const triggerPlannerAdd = () => {
     setTab('Planner');

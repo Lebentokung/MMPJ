@@ -1,5 +1,13 @@
-import React, { createContext, useEffect, useReducer } from "react";
+import React, { createContext, useEffect, useReducer, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth, db } from "../config/firebase";
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut,
+  onAuthStateChanged 
+} from "firebase/auth";
+import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 
 export const Usercontext = createContext();
 
@@ -18,6 +26,12 @@ const DEFAULT_PROFILE = {
 
 const userReducer = (state, action) => {
   switch (action.type) {
+    case "SET_CURRENT_USER":
+      return {
+        ...state,
+        currentUser: action.payload,
+      };
+
     case "ADD_USER":
       return {
         ...state,
@@ -77,6 +91,7 @@ const userReducer = (state, action) => {
 
 export const UserProvider = ({ children }) => {
   const [state, dispatch] = useReducer(userReducer, {
+    currentUser: null,
     users: [],
     timetable: [],
     exams: [],
@@ -85,8 +100,25 @@ export const UserProvider = ({ children }) => {
     profile: DEFAULT_PROFILE,
   });
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
+    // ฟัง authentication state changes
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        dispatch({ type: "SET_CURRENT_USER", payload: user });
+        // โหลดข้อมูล profile จาก Firestore
+        await loadUserProfile(user.uid);
+      } else {
+        dispatch({ type: "SET_CURRENT_USER", payload: null });
+        dispatch({ type: "SET_PROFILE", payload: null });
+      }
+      setLoading(false);
+    });
+
     loadInitialData();
+
+    return unsubscribe;
   }, []);
 
   async function loadInitialData() {
@@ -161,6 +193,108 @@ export const UserProvider = ({ children }) => {
     ]);
   }
 
+  // ฟังก์ชันสำหรับ Authentication
+  async function registerUser(email, password, userData) {
+    try {
+      // สร้าง account ใน Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // บันทึกข้อมูลผู้ใช้ใน Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        studentId: userData.studentId,
+        name: userData.name,
+        email: userData.email,
+        year: userData.year,
+        faculty: userData.faculty,
+        avatar: userData.avatar || null,
+        createdAt: new Date().toISOString(),
+      });
+
+      // อัพเดต profile ใน context
+      dispatch({ 
+        type: "SET_PROFILE", 
+        payload: {
+          studentId: userData.studentId,
+          name: userData.name,
+          email: userData.email,
+          year: userData.year,
+          faculty: userData.faculty,
+          avatar: userData.avatar || null,
+        }
+      });
+
+      return { success: true, user };
+    } catch (error) {
+      console.error("Register error:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async function loginUser(email, password) {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // โหลดข้อมูล profile จาก Firestore
+      await loadUserProfile(user.uid);
+
+      return { success: true, user };
+    } catch (error) {
+      console.error("Login error:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async function logoutUser() {
+    try {
+      await signOut(auth);
+      dispatch({ type: "SET_CURRENT_USER", payload: null });
+      dispatch({ type: "SET_PROFILE", payload: null });
+      return { success: true };
+    } catch (error) {
+      console.error("Logout error:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async function loadUserProfile(uid) {
+    try {
+      const docRef = doc(db, "users", uid);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const profileData = docSnap.data();
+        dispatch({ type: "SET_PROFILE", payload: profileData });
+        return profileData;
+      }
+    } catch (error) {
+      console.error("Load profile error:", error);
+    }
+  }
+
+  async function updateUserProfile(userData) {
+    try {
+      if (!state.currentUser) {
+        throw new Error("No user logged in");
+      }
+
+      // อัพเดตใน Firestore
+      await updateDoc(doc(db, "users", state.currentUser.uid), userData);
+
+      // อัพเดตใน context
+      dispatch({ 
+        type: "SET_PROFILE", 
+        payload: { ...state.profile, ...userData }
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error("Update profile error:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
   
   function saveProfile(profileData) {
     dispatch({ type: "SET_PROFILE", payload: profileData });
@@ -173,6 +307,8 @@ export const UserProvider = ({ children }) => {
   return (
     <Usercontext.Provider
       value={{
+        currentUser: state.currentUser,
+        loading,
         userState: state.users,
         timetable: state.timetable,
         exams: state.exams,
@@ -188,6 +324,11 @@ export const UserProvider = ({ children }) => {
         resetProfile,
         resetAppData,
         resetAppDataExceptProfile,
+        registerUser,
+        loginUser,
+        logoutUser,
+        loadUserProfile,
+        updateUserProfile,
       }}
     >
       {children}
