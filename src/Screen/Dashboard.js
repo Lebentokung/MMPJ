@@ -1,5 +1,5 @@
 import React, { useContext, useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ScrollView } from "react-native";
 import { Usercontext } from "../context/Usercontext";
 
 const DashboardScreen = ({ onPlannerQuickAdd }) => {
@@ -154,127 +154,149 @@ const DashboardScreen = ({ onPlannerQuickAdd }) => {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.todayDate}>{formatDate(now)}</Text>
+    <View style={{ flex: 1, padding:15,backgroundColor:'#fff4fb' }}>
+      <View style={{ flex: 1 }}>
 
-      <View style={styles.filterRow}>
-        <FilterButton label="วันนี้" active={period === "today"} onPress={() => setPeriod("today")} />
-        <FilterButton label="สัปดาห์หน้า" active={period === "nextWeek"} onPress={() => setPeriod("nextWeek")} />
-        <FilterButton label="เดือนหน้า" active={period === "nextMonth"} onPress={() => setPeriod("nextMonth")} />
-      </View>
 
-      <Text style={styles.summaryLabel}>สรุปข้อมูล: {filterLabel}</Text>
+        <Text style={styles.todayDate}>{formatDate(now)}</Text>
 
-      <View style={styles.dashboardTabRow}>
-        <FilterButton
-          label="วิชาเรียน"
-          active={dashboardTab === "classes"}
-          onPress={() => setDashboardTab("classes")}
-        />
-        <FilterButton
-          label="ตารางสอบ"
-          active={dashboardTab === "exams"}
-          onPress={() => setDashboardTab("exams")}
-        />
-      </View>
-      <View style={styles.splitContainer}>
-      {dashboardTab === "classes" ? (
-        <>
-          <Text style={styles.header}>วิชาเรียน</Text>
-          {filteredClasses.length > 0 ? (
+        <View style={styles.filterRow}>
+          <FilterButton label="วันนี้" active={period === "today"} onPress={() => setPeriod("today")} />
+          <FilterButton label="สัปดาห์หน้า" active={period === "nextWeek"} onPress={() => setPeriod("nextWeek")} />
+          <FilterButton label="เดือนหน้า" active={period === "nextMonth"} onPress={() => setPeriod("nextMonth")} />
+        </View>
+
+        <Text style={styles.summaryLabel}>สรุปข้อมูล: {filterLabel}</Text>
+
+        <View style={styles.dashboardTabRow}>
+          <FilterButton
+            label="วิชาเรียน"
+            active={dashboardTab === "classes"}
+            onPress={() => setDashboardTab("classes")}
+          />
+          <FilterButton
+            label="ตารางสอบ"
+            active={dashboardTab === "exams"}
+            onPress={() => setDashboardTab("exams")}
+          />
+        </View>
+        <ScrollView
+          
+        >
+
+
+          {dashboardTab === "classes" ? (
+            <>
+              <Text style={styles.header}>วิชาเรียน</Text>
+
+              {filteredClasses.length > 0 ? (
+                <FlatList
+                  data={filteredClasses}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  renderItem={({ item }) => (
+                    <View style={styles.classItem}>
+                      <Text style={styles.classText}>{item.name}</Text>
+                      <Text style={styles.subText}>
+                        {getDayCodeFromDate(item.occurrence)} • {item.occurrence.toLocaleDateString("th-TH")}
+                      </Text>
+                      <Text style={styles.detail}>{item.start} - {item.end}</Text>
+                      <Text style={styles.detail}>Room: {item.room}</Text>
+                    </View>
+                  )}
+                />
+              ) : (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
+                  <Text style={styles.noClasses}>Empty class schedule ({filterLabel})</Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <>
+              <Text style={styles.header}>ตารางสอบ</Text>
+
+              {filteredExams.length > 0 ? (
+                <FlatList
+                  data={filteredExams}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  renderItem={({ item }) => (
+                    <View style={styles.classItem}>
+                      <Text style={styles.classText}>{item.title}</Text>
+                      <Text style={styles.subText}>
+                        {getDayCodeFromDate(item.occurrence)} • {item.occurrence.toLocaleDateString("th-TH")}
+                      </Text>
+                      <Text style={styles.detail}>{item.start} - {item.end}</Text>
+                      <Text style={styles.detail}>Location: {item.location}</Text>
+                    </View>
+                  )}
+                />
+              ) : (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
+                  <Text style={styles.noClasses}>Empty exam schedule ({filterLabel})</Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {/* study plans */}
+          <Text style={styles.header}>แผนการเรียน</Text>
+
+          {studyPlans?.length > 0 ? (
             <FlatList
-              data={filteredClasses}
+              data={studyPlans}
               keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              renderItem={({ item }) => (
+                <View style={styles.classItem}>
+                  <Text style={styles.classText}>{item.subject}</Text>
+                  <Text style={styles.subText}>{item.topic}</Text>
+                  <Text style={styles.detail}>
+                    {item.date} | {item.time}
+                  </Text>
+                </View>
+              )}
+            />
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>ยังไม่มีแผนการเรียน</Text>
+            </View>
+          )}
+
+          {/* activities */}
+          <Text style={styles.header}>กิจกรรมทั้งหมด</Text>
+
+          {allPlannerActivities?.length > 0 ? (
+            <FlatList
+              data={allPlannerActivities}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
               renderItem={({ item }) => (
                 <View style={styles.classItem}>
                   <Text style={styles.classText}>{item.name}</Text>
-                  <Text style={styles.subText}>{getDayCodeFromDate(item.occurrence)} • {item.occurrence.toLocaleDateString("th-TH")}</Text>
-                  <Text style={styles.classText}>{item.start} - {item.end}</Text>
-                  <Text style={styles.classText}>Room: {item.room}</Text>
+                  <Text style={styles.subText}>
+                    {getDayCodeFromDate(item.occurrence)} • {item.occurrence.toLocaleDateString("th-TH")}
+                  </Text>
+                  <Text style={styles.detail}>{item.start} - {item.end}</Text>
+                  <Text style={styles.detail}>Room: {item.room}</Text>
                 </View>
               )}
             />
           ) : (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
-              <Text style={styles.noClasses}>Empty class schedule ({filterLabel})</Text>
+              <Text style={styles.emptyTitle}>ไม่มีกิจกรรม</Text>
             </View>
           )}
-        </>
-      ) : (
-        <>
-          <Text style={styles.header}>ตารางสอบ</Text>
-          {filteredExams.length > 0 ? (
-            <FlatList
-              data={filteredExams}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <View style={styles.examItem}>
-                  <Text style={styles.classText}>{item.title}</Text>
-                  <Text style={styles.subText}>{getDayCodeFromDate(item.occurrence)} • {item.occurrence.toLocaleDateString("th-TH")}</Text>
-                  <Text style={styles.classText}>{item.start} - {item.end}</Text>
-                  <Text style={styles.classText}>Location: {item.location}</Text>
-                </View>
-              )}
-            />
-          ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
-              <Text style={styles.noClasses}>Empty exam schedule ({filterLabel})</Text>
-            </View>
-          )}
-        </>
-      )}
-      {/* study plans section */}
-      <Text style={styles.header}>แผนการเรียน</Text>
-      {studyPlans && studyPlans.length > 0 ? (
-        <FlatList
-          data={studyPlans}
-          keyExtractor={item => item.id}
-          renderItem={({item}) => (
-            <View style={styles.card}>
-              <View>
-                <Text style={styles.subject}>{item.subject}</Text>
-                <Text style={styles.topic}>{item.topic}</Text>
-                <Text style={styles.detail}>{item.date} | {item.time}</Text>
-              </View>
-            </View>
-          )}
-          contentContainerStyle={{ paddingBottom: 100 }}
-        />
-      ) : (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>ยังไม่มีแผนการเรียน</Text>
-        </View>
-      )}
 
-      {/* planner activities section */}
-      <Text style={styles.header}>กิจกรรมทั้งหมด</Text>
-      {allPlannerActivities && allPlannerActivities.length > 0 ? (
-        <FlatList
-          data={allPlannerActivities}
-          keyExtractor={item => item.id}
-          renderItem={({item}) => (
-            <View style={styles.classItem}>
-              <Text style={styles.classText}>{item.name}</Text>
-              <Text style={styles.subText}>{getDayCodeFromDate(item.occurrence)} • {item.occurrence.toLocaleDateString("th-TH")}</Text>
-              <Text style={styles.classText}>{item.start} - {item.end}</Text>
-              <Text style={styles.classText}>Room: {item.room}</Text>
-            </View>
-          )}
-        />
-      ) : (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>ไม่มีกิจกรรม</Text>
-        </View>
-      )}
-    </View>
 
-    {/* quick‑add navigates to planner */}
-    <TouchableOpacity style={styles.fab} onPress={onPlannerQuickAdd}>
-      <Text style={styles.fabText}>+</Text>
-    </TouchableOpacity>
+        </ScrollView>
+      </View>
 
+      <TouchableOpacity style={styles.fab} onPress={onPlannerQuickAdd}>
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -289,12 +311,15 @@ function FilterButton({ label, active, onPress }) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    
     padding: 20,
-    backgroundColor: "#fff",
+    backgroundColor: "#fff4fb",
   },
   todayDate: {
-    fontSize: 14,
+    marginTop: 30,
+    marginBottom: 16,
+    fontSize: 20,
+    fontWeight: 'bold',
     color: "#6b3550",
     marginBottom: 10,
     textAlign: "center",
@@ -340,21 +365,24 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 10,
+    marginBottom: 5,
   },
   classItem: {
     padding: 15,
-    marginBottom: 10,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 5,
+    marginBottom: 5,
+    backgroundColor: "#f0dff0",
+    borderRadius: 8,
+    elevation: 1
   },
   classText: {
     fontSize: 16,
+    fontWeight: '600'
   },
   subText: {
     fontSize: 12,
     color: "#666",
     marginVertical: 2,
+    fontWeight: '500'
   },
   noClasses: {
     fontSize: 14,
@@ -364,7 +392,7 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     marginBottom: 12,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#f0dff0",
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#eee",
@@ -380,22 +408,21 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 10,
   },
-  splitContainer:{
-    flex:1,
-    gap:10,
+  splitContainer: {
+    gap: 10,
   },
-  // study plan / modal styles
-  card:{flexDirection:'row', justifyContent:'space-between', padding:12, borderWidth:1, borderColor:'#eee', borderRadius:8, marginVertical:6, backgroundColor:'#fff'},
-  subject:{fontWeight:'700', fontSize:16},
-  topic:{marginTop:4, color:'#444'},
-  detail:{marginTop:2, fontSize:12, color:'#888'},
-  modalContainer:{flex:1, justifyContent:'center', backgroundColor:'rgba(0,0,0,0.4)'},
-  modalBox:{backgroundColor:'#fff', margin:20, padding:16, borderRadius:8},
-  modalTitle:{fontSize:18, fontWeight:'700', marginBottom:12},
-  modalButtons:{flexDirection:'row', justifyContent:'space-between', marginTop:12},
-  modalBtn:{flex:1, padding:12, borderRadius:8, alignItems:'center', marginHorizontal:6},
-  fab:{position:'absolute', right:18, bottom:88, width:56, height:56, borderRadius:28, backgroundColor:'#d184b8', alignItems:'center', justifyContent:'center', elevation:4, shadowColor:'#000', shadowOffset:{width:0,height:2}, shadowOpacity:0.2, shadowRadius:4},
-  fabText:{color:'#fff', fontSize:28, lineHeight:30},
+
+  card: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderWidth: 1, borderColor: '#eee', borderRadius: 8, marginVertical: 6, backgroundColor: '#f0dff0', elevation: 1 },
+  subject: { fontWeight: '700', fontSize: 16 },
+  topic: { marginTop: 4, color: '#444' },
+  detail: { marginTop: 2, fontSize: 12, color: '#888' },
+  modalContainer: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalBox: { backgroundColor: '#fff', margin: 20, padding: 16, borderRadius: 8 },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
+  modalBtn: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center', marginHorizontal: 6 },
+  fab: { position: 'absolute', right: 18, bottom: 88, width: 56, height: 56, borderRadius: 28, backgroundColor: '#d184b8', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
+  fabText: { color: '#fff', fontSize: 28, lineHeight: 30 },
 });
 
 export default DashboardScreen;

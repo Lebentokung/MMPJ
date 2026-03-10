@@ -1,5 +1,5 @@
 import React, {useContext, useState} from 'react';
-import {View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Modal, Pressable} from 'react-native';
+import {View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Modal, Pressable} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Usercontext } from '../context/Usercontext';
 
@@ -263,232 +263,362 @@ export default function Timetable(){
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Timetable</Text>
+  <View style={styles.container}>
+    <Text style={styles.header}>Timetable</Text>
 
-      <View style={{flex:1}}>
-        <View style={styles.segControl}>
-          <TouchableOpacity style={[styles.segBtn, viewMode==='classes' && styles.segActive]} onPress={()=>setViewMode('classes')}><Text style={viewMode==='classes'?{fontWeight:'700'}:{}}>{'Timetable'}</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.segBtn, viewMode==='exams' && styles.segActive]} onPress={()=>setViewMode('exams')}><Text style={viewMode==='exams'?{fontWeight:'700'}:{}}>{'Exams'}</Text></TouchableOpacity>
-        </View>
+    <View style={{flex:1}}>
 
-        {viewMode==='classes' ? (
-          <>
-            <Text style={{fontWeight:'700', marginVertical:8}}>Weekly View</Text>
-            <FlatList data={days} keyExtractor={d=>d} renderItem={({item})=>{
-              const items = list.filter(i=>i.day===item);
-              return (
-                <View style={styles.dayBlock}>
-                  <Text style={styles.dayTitle}>{dayNames[item]}</Text>
-                  {items.length===0 ? <Text style={{opacity:0.6}}>No classes</Text> : items.map(it=> (
-                    <View key={it.id} style={styles.classRow}>
-                      <View>
-                        <Text style={{fontWeight:'600'}}>{it.name} ({it.code})</Text>
-                        {(it.classDate || it.classMonth) ? <Text>{it.classDate || '-'} / {it.classMonth || '-'}</Text> : null}
-                        <Text>{it.start} - {it.end} • {it.room}</Text>
-                      </View>
-                      <View style={{flexDirection:'row', alignItems:'center'}}>
-                        <TouchableOpacity onPress={()=>openEdit(it)} style={[styles.rowBtn, {marginRight:8}]}><Text>Edit</Text></TouchableOpacity>
-                        <TouchableOpacity onPress={()=>remove(it)} style={styles.del}><Text>Delete</Text></TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              );
-            }} />
-            {list.length===0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
-                <Text style={styles.emptySub}>Empty timetable. กด + เพื่อเพิ่มวิชาเรียน</Text>
-              </View>
-            ) : null}
-          </>
-        ) : (
-          <>
-            <Text style={{fontWeight:'700', marginVertical:8}}>Exam Schedule</Text>
-            <FlatList data={days} keyExtractor={d=>d} renderItem={({item})=>{
-              const items = exams.filter(ex=> ex.date === item);
-              return (
-                <View style={styles.dayBlock}>
-                  <Text style={styles.dayTitle}>{dayNames[item]}</Text>
-                  {items.length===0 ? <Text style={{opacity:0.6}}>No exams</Text> : items.map(it=> (
-                    <View key={it.id} style={styles.classRow}>
-                      <View>
-                        <Text style={{fontWeight:'600'}}>{it.title}</Text>
-                        {(it.examDayOfMonth || it.examMonth) ? <Text>{it.examDayOfMonth || '-'} / {it.examMonth || '-'}</Text> : null}
-                        <Text>{it.start} - {it.end} • {it.location}</Text>
-                      </View>
-                      <View style={{flexDirection:'row', alignItems:'center'}}>
-                        <TouchableOpacity onPress={()=>openEditExam(it)} style={[styles.rowBtn, {marginRight:8}]}><Text>Edit</Text></TouchableOpacity>
-                        <TouchableOpacity onPress={()=>removeExam(it.id)} style={styles.del}><Text>Delete</Text></TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              );
-            }} />
-            {exams.length===0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
-                <Text style={styles.emptySub}>Empty exam schedule. กด + เพื่อเพิ่มตารางสอบ</Text>
-              </View>
-            ) : null}
-          </>
-        )}
+      {/* Seg Control */}
+      <View style={styles.segControl}>
+        <TouchableOpacity
+          style={[styles.segBtn, viewMode==='classes' && styles.segActive]}
+          onPress={()=>setViewMode('classes')}
+        >
+          <Text style={viewMode==='classes'?{fontWeight:'700',color:'#fff'}:{}}>
+            Timetable
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.segBtn, viewMode==='exams' && styles.segActive]}
+          onPress={()=>setViewMode('exams')}
+        >
+          <Text style={viewMode==='exams'?{fontWeight:'700',color:'#fff'}:{}}>
+            Exams
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.fab} onPress={()=> viewMode==='classes' ? openAdd() : openAddExam()} accessibilityLabel="Add">
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+      {viewMode==='classes' ? (
+        <>
+          <Text style={{fontWeight:'700', marginVertical:8}}>
+            Weekly View
+          </Text>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={()=>setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={{fontWeight:'700', marginBottom:8}}>{editingId? 'Edit Class' : 'Add Class'}</Text>
-            <TextInput placeholder="Subject name" value={name} onChangeText={setName} style={styles.input} />
-            <TextInput placeholder="Code" value={code} onChangeText={setCode} style={styles.input} />
-            <TextInput placeholder="Room" value={room} onChangeText={setRoom} style={styles.input} />
+          {/* Scroll เฉพาะ Monday-Sunday */}
+          <ScrollView
+            style={{flex:1}}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{paddingBottom:120}}
+          >
 
-            {editingId ? (
-              <View style={{borderWidth:1, borderColor:'#eee', borderRadius:6, overflow:'hidden', marginVertical:6}}>
-                <Picker selectedValue={day} onValueChange={v=>setDay(v)}>
-                  <Picker.Item label="Monday" value="Mon" />
-                  <Picker.Item label="Tuesday" value="Tue" />
-                  <Picker.Item label="Wednesday" value="Wed" />
-                  <Picker.Item label="Thursday" value="Thu" />
-                  <Picker.Item label="Friday" value="Fri" />
-                  <Picker.Item label="Saturday" value="Sat" />
-                  <Picker.Item label="Sunday" value="Sun" />
-                </Picker>
-              </View>
-            ) : (
-              <View style={styles.multiDayWrap}>
-                <Text style={styles.multiDayLabel}>Select days (multi-select)</Text>
-                <View style={styles.dayChipRow}>
-                  {days.map(d => {
-                    const active = selectedDays.includes(d);
-                    return (
-                      <TouchableOpacity
-                        key={d}
-                        onPress={() => toggleSelectedDay(d)}
-                        style={[styles.dayChip, active && styles.dayChipActive]}
-                      >
-                        <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>{d}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+            {days.map(item=>{
+              const items = list.filter(i=>i.day===item)
+
+              return(
+                <View key={item} style={styles.dayBlock}>
+                  <Text style={styles.dayTitle}>{dayNames[item]}</Text>
+
+                  {items.length===0 ? (
+                    <Text style={{opacity:0.6}}>No classes</Text>
+                  ) : (
+                    items.map(it=>(
+                      <View key={it.id} style={styles.classCard}>
+                        <View>
+                          <Text style={{fontWeight:'600'}}>
+                            {it.name} ({it.code})
+                          </Text>
+
+                          {(it.classDate || it.classMonth) &&
+                            <Text>
+                              {it.classDate || '-'} / {it.classMonth || '-'}
+                            </Text>
+                          }
+
+                          <Text>
+                            {it.start} - {it.end} • {it.room}
+                          </Text>
+                        </View>
+
+                        <View style={{flexDirection:'row',alignItems:'center'}}>
+                          <TouchableOpacity
+                            onPress={()=>openEdit(it)}
+                            style={[styles.rowBtn,{marginRight:8}]}
+                          >
+                            <Text>Edit</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            onPress={()=>remove(it)}
+                            style={styles.del}
+                          >
+                            <Text>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))
+                  )}
                 </View>
+              )
+            })}
+
+            {list.length===0 && (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
+                <Text style={styles.emptySub}>
+                  Empty timetable. กด + เพื่อเพิ่มวิชาเรียน
+                </Text>
               </View>
             )}
 
-            <View style={{flexDirection:'row', justifyContent:'space-between'}}>
-              <TextInput
-                placeholder="Date (1-31)"
-                value={classDate}
-                onChangeText={setClassDate}
-                keyboardType="number-pad"
-                style={[styles.input,{flex:1, marginRight:6}]}
-              />
-              <TextInput
-                placeholder="Month"
-                value={classMonth}
-                onChangeText={setClassMonth}
-                style={[styles.input,{flex:1}]}
-              />
-            </View>
+          </ScrollView>
+        </>
+      ) : (
+        <>
+          <Text style={{fontWeight:'700', marginVertical:8}}>
+            Exam Schedule
+          </Text>
 
-            <View style={{flexDirection:'row', justifyContent:'space-between'}}>
-              <TextInput value={start} onChangeText={setStart} style={[styles.input,{flex:1, marginRight:6}]} />
-              <TextInput value={end} onChangeText={setEnd} style={[styles.input,{flex:1}]} />
-            </View>
+          {/* Scroll เฉพาะ Monday-Sunday */}
+          <ScrollView
+            style={{flex:1}}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{paddingBottom:120}}
+          >
 
-            <View style={{flexDirection:'row', marginTop:12}}>
-              <Pressable style={[styles.modalBtn, {backgroundColor:'#ccc'}]} onPress={()=>{setModalVisible(false); setEditingId(null);}}>
-                <Text>Cancel</Text>
-              </Pressable>
-              <Pressable style={[styles.modalBtn, {backgroundColor:'#b96aa2'}]} onPress={addClass}>
-                <Text style={{color:'#fff'}}>Save</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+            {days.map(item=>{
+              const items = exams.filter(ex=>ex.date===item)
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={examModalVisible}
-        onRequestClose={()=>{setExamModalVisible(false); setEditingExamId(null);}}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={{fontWeight:'700', marginBottom:8}}>{editingExamId? 'Edit Exam' : 'Add Exam'}</Text>
-            <TextInput placeholder="Title" value={examTitle} onChangeText={setExamTitle} style={styles.input} />
-            <TextInput placeholder="Location" value={examLocation} onChangeText={setExamLocation} style={styles.input} />
+              return(
+                <View key={item} style={styles.dayBlock}>
+                  <Text style={styles.dayTitle}>{dayNames[item]}</Text>
 
-            <View style={{borderWidth:1, borderColor:'#eee', borderRadius:6, overflow:'hidden', marginVertical:6, backgroundColor:'#fff'}}>
-              <Picker selectedValue={examSubjectId} onValueChange={v=>setExamSubjectId(v)}>
-                <Picker.Item label="Not linked to subject" value="" />
-                {list.map(subject => (
-                  <Picker.Item key={subject.id} label={subject.name} value={subject.id} />
-                ))}
-              </Picker>
-            </View>
+                  {items.length===0 ? (
+                    <Text style={{opacity:0.6}}>No exams</Text>
+                  ) : (
+                    items.map(it=>(
+                      <View key={it.id} style={styles.classCard}>
+                        <View>
+                          <Text style={{fontWeight:'600'}}>
+                            {it.title}
+                          </Text>
 
-            <View style={{borderWidth:1, borderColor:'#eee', borderRadius:6, overflow:'hidden', marginVertical:6}}>
-              <Picker selectedValue={examDate} onValueChange={v=>setExamDate(v)}>
-                <Picker.Item label="Monday" value="Mon" />
-                <Picker.Item label="Tuesday" value="Tue" />
-                <Picker.Item label="Wednesday" value="Wed" />
-                <Picker.Item label="Thursday" value="Thu" />
-                <Picker.Item label="Friday" value="Fri" />
-                <Picker.Item label="Saturday" value="Sat" />
-                <Picker.Item label="Sunday" value="Sun" />
-              </Picker>
-            </View>
+                          {(it.examDayOfMonth || it.examMonth) &&
+                            <Text>
+                              {it.examDayOfMonth || '-'} / {it.examMonth || '-'}
+                            </Text>
+                          }
 
-            <View style={{flexDirection:'row', justifyContent:'space-between'}}>
-              <TextInput
-                placeholder="Date (1-31)"
-                value={examDayOfMonth}
-                onChangeText={setExamDayOfMonth}
-                keyboardType="number-pad"
-                style={[styles.input,{flex:1, marginRight:6}]}
-              />
-              <TextInput
-                placeholder="Month"
-                value={examMonth}
-                onChangeText={setExamMonth}
-                style={[styles.input,{flex:1}]}
-              />
-            </View>
+                          <Text>
+                            {it.start} - {it.end} • {it.location}
+                          </Text>
+                        </View>
 
-            <View style={{flexDirection:'row', justifyContent:'space-between'}}>
-              <TextInput value={examStart} onChangeText={setExamStart} style={[styles.input,{flex:1, marginRight:6}]} />
-              <TextInput value={examEnd} onChangeText={setExamEnd} style={[styles.input,{flex:1}]} />
-            </View>
+                        <View style={{flexDirection:'row',alignItems:'center'}}>
+                          <TouchableOpacity
+                            onPress={()=>openEditExam(it)}
+                            style={[styles.rowBtn,{marginRight:8}]}
+                          >
+                            <Text>Edit</Text>
+                          </TouchableOpacity>
 
-            <View style={{flexDirection:'row', marginTop:12}}>
-              <Pressable style={[styles.modalBtn, {backgroundColor:'#ccc'}]} onPress={()=>{setExamModalVisible(false); setEditingExamId(null);}}>
-                <Text>Cancel</Text>
-              </Pressable>
-              <Pressable style={[styles.modalBtn, {backgroundColor:'#b96aa2'}]} onPress={addExam}>
-                <Text style={{color:'#fff'}}>Save</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+                          <TouchableOpacity
+                            onPress={()=>removeExam(it.id)}
+                            style={styles.del}
+                          >
+                            <Text>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))
+                  )}
+                </View>
+              )
+            })}
+
+            {exams.length===0 && (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>ไม่มีข้อมูล</Text>
+                <Text style={styles.emptySub}>
+                  Empty exam schedule. กด + เพื่อเพิ่มตารางสอบ
+                </Text>
+              </View>
+            )}
+
+          </ScrollView>
+        </>
+      )}
+
     </View>
-  );
+
+    {/* Floating + button */}
+    <TouchableOpacity
+      style={styles.fab}
+      onPress={()=> viewMode==='classes' ? openAdd() : openAddExam()}
+      accessibilityLabel="Add"
+    >
+      <Text style={styles.fabText}>+</Text>
+    </TouchableOpacity>
+
+   
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={modalVisible}
+      onRequestClose={()=>setModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+
+          <Text style={{fontWeight:'700', marginBottom:8}}>
+            {editingId? 'Edit Class' : 'Add Class'}
+          </Text>
+
+          <TextInput placeholder="Subject name" value={name} onChangeText={setName} style={styles.input}/>
+          <TextInput placeholder="Code" value={code} onChangeText={setCode} style={styles.input}/>
+          <TextInput placeholder="Room" value={room} onChangeText={setRoom} style={styles.input}/>
+
+          {editingId ? (
+            <View style={{borderWidth:1,borderColor:'#eee',borderRadius:6,overflow:'hidden',marginVertical:6}}>
+              <Picker selectedValue={day} onValueChange={v=>setDay(v)}>
+                <Picker.Item label="Monday" value="Mon"/>
+                <Picker.Item label="Tuesday" value="Tue"/>
+                <Picker.Item label="Wednesday" value="Wed"/>
+                <Picker.Item label="Thursday" value="Thu"/>
+                <Picker.Item label="Friday" value="Fri"/>
+                <Picker.Item label="Saturday" value="Sat"/>
+                <Picker.Item label="Sunday" value="Sun"/>
+              </Picker>
+            </View>
+          ) : (
+            <View style={styles.multiDayWrap}>
+              <Text style={styles.multiDayLabel}>Select days (multi-select)</Text>
+
+              <View style={styles.dayChipRow}>
+                {days.map(d=>{
+                  const active = selectedDays.includes(d)
+
+                  return(
+                    <TouchableOpacity
+                      key={d}
+                      onPress={()=>toggleSelectedDay(d)}
+                      style={[styles.dayChip, active && styles.dayChipActive]}
+                    >
+                      <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
+                        {d}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+          )}
+
+          <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+            <TextInput
+              placeholder="Date (1-31)"
+              value={classDate}
+              onChangeText={setClassDate}
+              keyboardType="number-pad"
+              style={[styles.input,{flex:1,marginRight:6}]}
+            />
+            <TextInput
+              placeholder="Month"
+              value={classMonth}
+              onChangeText={setClassMonth}
+              style={[styles.input,{flex:1}]}
+            />
+          </View>
+
+          <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+            <TextInput value={start} onChangeText={setStart} style={[styles.input,{flex:1,marginRight:6}]}/>
+            <TextInput value={end} onChangeText={setEnd} style={[styles.input,{flex:1}]}/>
+          </View>
+
+          <View style={{flexDirection:'row',marginTop:12}}>
+            <Pressable style={[styles.modalBtn,{backgroundColor:'#ccc'}]} onPress={()=>{setModalVisible(false);setEditingId(null)}}>
+              <Text>Cancel</Text>
+            </Pressable>
+
+            <Pressable style={[styles.modalBtn,{backgroundColor:'#b96aa2'}]} onPress={addClass}>
+              <Text style={{color:'#fff'}}>Save</Text>
+            </Pressable>
+          </View>
+
+        </View>
+      </View>
+    </Modal>
+
+    
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={examModalVisible}
+      onRequestClose={()=>{setExamModalVisible(false);setEditingExamId(null)}}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+
+          <Text style={{fontWeight:'700', marginBottom:8}}>
+            {editingExamId? 'Edit Exam' : 'Add Exam'}
+          </Text>
+
+          <TextInput placeholder="Title" value={examTitle} onChangeText={setExamTitle} style={styles.input}/>
+          <TextInput placeholder="Location" value={examLocation} onChangeText={setExamLocation} style={styles.input}/>
+
+          <View style={{borderWidth:1,borderColor:'#eee',borderRadius:6,overflow:'hidden',marginVertical:6,backgroundColor:'#fff'}}>
+            <Picker selectedValue={examSubjectId} onValueChange={v=>setExamSubjectId(v)}>
+              <Picker.Item label="Not linked to subject" value=""/>
+              {list.map(subject=>(
+                <Picker.Item key={subject.id} label={subject.name} value={subject.id}/>
+              ))}
+            </Picker>
+          </View>
+
+          <View style={{borderWidth:1,borderColor:'#eee',borderRadius:6,overflow:'hidden',marginVertical:6}}>
+            <Picker selectedValue={examDate} onValueChange={v=>setExamDate(v)}>
+              <Picker.Item label="Monday" value="Mon"/>
+              <Picker.Item label="Tuesday" value="Tue"/>
+              <Picker.Item label="Wednesday" value="Wed"/>
+              <Picker.Item label="Thursday" value="Thu"/>
+              <Picker.Item label="Friday" value="Fri"/>
+              <Picker.Item label="Saturday" value="Sat"/>
+              <Picker.Item label="Sunday" value="Sun"/>
+            </Picker>
+          </View>
+
+          <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+            <TextInput
+              placeholder="Date (1-31)"
+              value={examDayOfMonth}
+              onChangeText={setExamDayOfMonth}
+              keyboardType="number-pad"
+              style={[styles.input,{flex:1,marginRight:6}]}
+            />
+            <TextInput
+              placeholder="Month"
+              value={examMonth}
+              onChangeText={setExamMonth}
+              style={[styles.input,{flex:1}]}
+            />
+          </View>
+
+          <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+            <TextInput value={examStart} onChangeText={setExamStart} style={[styles.input,{flex:1,marginRight:6}]}/>
+            <TextInput value={examEnd} onChangeText={setExamEnd} style={[styles.input,{flex:1}]}/>
+          </View>
+
+          <View style={{flexDirection:'row',marginTop:12}}>
+            <Pressable style={[styles.modalBtn,{backgroundColor:'#ccc'}]} onPress={()=>{setExamModalVisible(false);setEditingExamId(null)}}>
+              <Text>Cancel</Text>
+            </Pressable>
+
+            <Pressable style={[styles.modalBtn,{backgroundColor:'#b96aa2'}]} onPress={addExam}>
+              <Text style={{color:'#fff'}}>Save</Text>
+            </Pressable>
+          </View>
+
+        </View>
+      </View>
+    </Modal>
+
+  </View>
+)
 }
 
 const styles = StyleSheet.create({
   container:{flex:1, padding:16, backgroundColor:'#fff4fb'},
-  header:{fontSize:18, fontWeight:'700', textAlign:'center'},
+  header:{marginTop:32,marginBottom:16,fontSize:18, fontWeight:'700', textAlign:'center'},
   input:{borderWidth:1, borderColor:'#eee', padding:8, borderRadius:6, marginVertical:6, backgroundColor:'#fff'},
   dayBlock:{paddingVertical:8, borderBottomWidth:1, borderColor:'#f0dff0'},
   dayTitle:{fontWeight:'700', marginBottom:6},
@@ -511,7 +641,17 @@ const styles = StyleSheet.create({
   modalBtn:{flex:1, padding:12, borderRadius:8, alignItems:'center', marginHorizontal:6}
   ,segControl:{flexDirection:'row', backgroundColor:'#fff', borderRadius:8, overflow:'hidden', marginVertical:8}
   ,segBtn:{flex:1, padding:10, alignItems:'center'}
-  ,segActive:{backgroundColor:'#f2d7ec'}
+  ,segActive:{backgroundColor:'#b96aa2'}
   ,examRow:{flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingVertical:10, borderBottomWidth:1, borderColor:'#f6e6f1'}
-  ,rowBtn:{padding:6}
+  ,rowBtn:{padding:6},
+  classCard:{
+  backgroundColor:"#f0dff0",
+  borderRadius:12,
+  padding:12,
+  marginVertical:3,
+  flexDirection:"row",
+  justifyContent:"space-between",
+  alignItems:"center",
+  elevation:1
+}
 });
