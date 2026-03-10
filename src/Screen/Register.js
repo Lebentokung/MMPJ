@@ -27,16 +27,18 @@ export default function Register({ onAuthSuccess }) {
     const [confirmPassword, setConfirmPassword] = useState("")
 
     const handleAuth = async () => {
+        const normalizedEmail = email.trim().toLowerCase()
+        const normalizedPassword = password
 
         if (isLoginMode) {
 
-            if (!email || !password) {
+            if (!normalizedEmail || !normalizedPassword) {
                 Alert.alert("แจ้งเตือน", "กรอก Email และ Password ให้ครบ")
                 return
             }
 
             setLoading(true)
-            const result = await loginUser(email, password)
+            const result = await loginUser(normalizedEmail, normalizedPassword)
             setLoading(false)
 
             if (result.success) {
@@ -55,28 +57,28 @@ export default function Register({ onAuthSuccess }) {
 
         else {
 
-            if (!studentId || !name || !email || !year || !faculty || !password || !confirmPassword) {
+            if (!studentId.trim() || !name.trim() || !normalizedEmail || !year.trim() || !faculty.trim() || !normalizedPassword || !confirmPassword) {
                 Alert.alert("แจ้งเตือน", "กรอกข้อมูลให้ครบทุกช่อง")
                 return
             }
 
-            if (password !== confirmPassword) {
+            if (normalizedPassword !== confirmPassword) {
                 Alert.alert("แจ้งเตือน", "Password และ Confirm Password ไม่ตรงกัน")
                 return
             }
 
-            if (password.length < 6) {
+            if (normalizedPassword.length < 6) {
                 Alert.alert("แจ้งเตือน", "Password ต้องมีอย่างน้อย 6 ตัวอักษร")
                 return
             }
 
             setLoading(true)
-            const result = await registerUser(email, password, {
-                studentId,
-                name,
-                email,
-                year,
-                faculty,
+            const result = await registerUser(normalizedEmail, normalizedPassword, {
+                studentId: studentId.trim(),
+                name: name.trim(),
+                email: normalizedEmail,
+                year: year.trim(),
+                faculty: faculty.trim(),
             })
             setLoading(false)
 

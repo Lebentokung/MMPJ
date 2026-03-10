@@ -1,5 +1,4 @@
 import React, { createContext, useEffect, useReducer, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, db } from "../config/firebase";
 import { 
   createUserWithEmailAndPassword, 
@@ -11,10 +10,6 @@ import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 
 export const Usercontext = createContext();
 
-const TIMETABLE_KEY = "timetable";
-const EXAMS_KEY = "exams";
-const PLANNER_ACTIVITIES_KEY = "plannerActivities";
-const STUDY_PLANS_KEY = "studyPlans";
 const DEFAULT_PROFILE = {
   studentId: "",
   name: "",
@@ -22,6 +17,13 @@ const DEFAULT_PROFILE = {
   year: "",
   faculty: "",
   avatar: null,
+};
+
+const DEFAULT_APP_DATA = {
+  timetable: [],
+  exams: [],
+  plannerActivities: [],
+  studyPlans: [],
 };
 
 const userReducer = (state, action) => {
@@ -102,82 +104,109 @@ export const UserProvider = ({ children }) => {
 
   const [loading, setLoading] = useState(true);
 
+  function userDocRef(uid) {
+    return doc(db, "users", uid);
+  }
+
   useEffect(() => {
-    // ฟัง authentication state changes
+    // Listen to auth changes and load all user data from Firestore.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         dispatch({ type: "SET_CURRENT_USER", payload: user });
-        // โหลดข้อมูล profile จาก Firestore
-        await loadUserProfile(user.uid);
+        await loadUserData(user.uid);
       } else {
         dispatch({ type: "SET_CURRENT_USER", payload: null });
         dispatch({ type: "SET_PROFILE", payload: null });
+        dispatch({ type: "SET_TIMETABLE", payload: [] });
+        dispatch({ type: "SET_EXAMS", payload: [] });
+        dispatch({ type: "SET_PLANNER_ACTIVITIES", payload: [] });
+        dispatch({ type: "SET_STUDY_PLANS", payload: [] });
       }
       setLoading(false);
     });
 
-    loadInitialData();
-
     return unsubscribe;
   }, []);
 
-  async function loadInitialData() {
-    const [rawTimetable, rawExams, rawPlannerActivities, rawStudyPlans] = await Promise.all([
-      AsyncStorage.getItem(TIMETABLE_KEY),
-      AsyncStorage.getItem(EXAMS_KEY),
-      AsyncStorage.getItem(PLANNER_ACTIVITIES_KEY),
-      AsyncStorage.getItem(STUDY_PLANS_KEY),
-    ]);
+  async function loadUserData(uid) {
+    try {
+      const snapshot = await getDoc(userDocRef(uid));
 
-    dispatch({
-      type: "SET_TIMETABLE",
-      payload: rawTimetable ? JSON.parse(rawTimetable) : [],
-    });
+      if (!snapshot.exists()) {
+        const base = {
+          ...DEFAULT_PROFILE,
+          email: auth.currentUser?.email || "",
+          ...DEFAULT_APP_DATA,
+          createdAt: new Date().toISOString(),
+        };
+        await setDoc(userDocRef(uid), base, { merge: true });
+        dispatch({ type: "SET_PROFILE", payload: base });
+        dispatch({ type: "SET_TIMETABLE", payload: [] });
+        dispatch({ type: "SET_EXAMS", payload: [] });
+        dispatch({ type: "SET_PLANNER_ACTIVITIES", payload: [] });
+        dispatch({ type: "SET_STUDY_PLANS", payload: [] });
+        return;
+      }
 
-    dispatch({
-      type: "SET_EXAMS",
-      payload: rawExams ? JSON.parse(rawExams) : [],
-    });
+      const data = snapshot.data();
+      dispatch({
+        type: "SET_PROFILE",
+        payload: {
+          studentId: data.studentId || "",
+          name: data.name || "",
+          email: data.email || auth.currentUser?.email || "",
+          year: data.year || "",
+          faculty: data.faculty || "",
+          avatar: data.avatar || null,
+        },
+      });
+      dispatch({ type: "SET_TIMETABLE", payload: data.timetable || [] });
+      dispatch({ type: "SET_EXAMS", payload: data.exams || [] });
+      dispatch({ type: "SET_PLANNER_ACTIVITIES", payload: data.plannerActivities || [] });
+      dispatch({ type: "SET_STUDY_PLANS", payload: data.studyPlans || [] });
+    } catch (error) {
+      console.error("Load user data error:", error);
+    }
+  }
 
-    dispatch({
-      type: "SET_PLANNER_ACTIVITIES",
-      payload: rawPlannerActivities ? JSON.parse(rawPlannerActivities) : [],
-    });
+  async function updateUserDoc(payload) {
+    const uid = state.currentUser?.uid;
+    if (!uid) return;
 
-    dispatch({
-      type: "SET_STUDY_PLANS",
-      payload: rawStudyPlans ? JSON.parse(rawStudyPlans) : [],
-    });
+    try {
+      await updateDoc(userDocRef(uid), payload);
+    } catch (error) {
+      // Fallback for first write when doc was not created yet.
+      await setDoc(userDocRef(uid), payload, { merge: true });
+    }
   }
 
   async function saveTimetable(timetable) {
     dispatch({ type: "SET_TIMETABLE", payload: timetable });
-    await AsyncStorage.setItem(TIMETABLE_KEY, JSON.stringify(timetable));
+    await updateUserDoc({ timetable });
   }
 
   async function saveExams(exams) {
     dispatch({ type: "SET_EXAMS", payload: exams });
-    await AsyncStorage.setItem(EXAMS_KEY, JSON.stringify(exams));
+    await updateUserDoc({ exams });
   }
 
   async function savePlannerActivities(plannerActivities) {
     dispatch({ type: "SET_PLANNER_ACTIVITIES", payload: plannerActivities });
-    await AsyncStorage.setItem(PLANNER_ACTIVITIES_KEY, JSON.stringify(plannerActivities));
+    await updateUserDoc({ plannerActivities });
   }
 
   async function saveStudyPlans(studyPlans) {
     dispatch({ type: "SET_STUDY_PLANS", payload: studyPlans });
-    await AsyncStorage.setItem(STUDY_PLANS_KEY, JSON.stringify(studyPlans));
+    await updateUserDoc({ studyPlans });
   }
 
   async function resetAppData() {
     dispatch({ type: "RESET_APP" });
-    await Promise.all([
-      AsyncStorage.removeItem(TIMETABLE_KEY),
-      AsyncStorage.removeItem(EXAMS_KEY),
-      AsyncStorage.removeItem(PLANNER_ACTIVITIES_KEY),
-      AsyncStorage.removeItem(STUDY_PLANS_KEY),
-    ]);
+    await updateUserDoc({
+      ...DEFAULT_APP_DATA,
+      ...DEFAULT_PROFILE,
+    });
   }
 
   async function resetAppDataExceptProfile() {
@@ -185,22 +214,15 @@ export const UserProvider = ({ children }) => {
     dispatch({ type: "SET_EXAMS", payload: [] });
     dispatch({ type: "SET_PLANNER_ACTIVITIES", payload: [] });
     dispatch({ type: "SET_STUDY_PLANS", payload: [] });
-    await Promise.all([
-      AsyncStorage.removeItem(TIMETABLE_KEY),
-      AsyncStorage.removeItem(EXAMS_KEY),
-      AsyncStorage.removeItem(PLANNER_ACTIVITIES_KEY),
-      AsyncStorage.removeItem(STUDY_PLANS_KEY),
-    ]);
+    await updateUserDoc({ ...DEFAULT_APP_DATA });
   }
 
   // ฟังก์ชันสำหรับ Authentication
   async function registerUser(email, password, userData) {
     try {
-      // สร้าง account ใน Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // บันทึกข้อมูลผู้ใช้ใน Firestore
       await setDoc(doc(db, "users", user.uid), {
         studentId: userData.studentId,
         name: userData.name,
@@ -208,10 +230,10 @@ export const UserProvider = ({ children }) => {
         year: userData.year,
         faculty: userData.faculty,
         avatar: userData.avatar || null,
+        ...DEFAULT_APP_DATA,
         createdAt: new Date().toISOString(),
-      });
+      }, { merge: true });
 
-      // อัพเดต profile ใน context
       dispatch({ 
         type: "SET_PROFILE", 
         payload: {
@@ -236,8 +258,7 @@ export const UserProvider = ({ children }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // โหลดข้อมูล profile จาก Firestore
-      await loadUserProfile(user.uid);
+      await loadUserData(user.uid);
 
       return { success: true, user };
     } catch (error) {
@@ -259,18 +280,7 @@ export const UserProvider = ({ children }) => {
   }
 
   async function loadUserProfile(uid) {
-    try {
-      const docRef = doc(db, "users", uid);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const profileData = docSnap.data();
-        dispatch({ type: "SET_PROFILE", payload: profileData });
-        return profileData;
-      }
-    } catch (error) {
-      console.error("Load profile error:", error);
-    }
+    await loadUserData(uid);
   }
 
   async function updateUserProfile(userData) {
@@ -279,8 +289,7 @@ export const UserProvider = ({ children }) => {
         throw new Error("No user logged in");
       }
 
-      // อัพเดตใน Firestore
-      await updateDoc(doc(db, "users", state.currentUser.uid), userData);
+      await updateUserDoc(userData);
 
       // อัพเดตใน context
       dispatch({ 
@@ -295,7 +304,6 @@ export const UserProvider = ({ children }) => {
     }
   }
 
-  
   function saveProfile(profileData) {
     dispatch({ type: "SET_PROFILE", payload: profileData });
   }
