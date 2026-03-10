@@ -113,6 +113,23 @@ export default function Timetable(){
 
     saveTimetable([...newItems, ...list]);
     setModalVisible(false);
+
+    // เปิด exam modal เพื่อเพิ่มตารางสอบสำหรับวิชาใหม่
+    setTimeout(() => {
+      const newClassId = newItems[0]?.id;
+      if (newClassId) {
+        setEditingExamId(null);
+        setExamTitle(name); 
+        setExamDate('Mon'); 
+        setExamDayOfMonth(''); 
+        setExamMonth(''); 
+        setExamStart('09:00'); 
+        setExamEnd('10:00'); 
+        setExamLocation(''); 
+        setExamSubjectId(newClassId);
+        setExamModalVisible(true);
+      }
+    }, 500);
   }
 
   function openAddExam(){
