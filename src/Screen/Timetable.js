@@ -253,7 +253,7 @@ export default function Timetable() {
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const dayNames = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday' };
-  const dayColors = { Mon: '#ffd6e8', Tue: '#fce0f5', Wed: '#f5d6ff', Thu: '#e8d6ff', Fri: '#d6e8ff', Sat: '#d6f5e8', Sun: '#fff0d6' };
+  const dayColors = { Mon: '#feffd6', Tue: '#fce0f5', Wed: '#d6ffd9', Thu: '#fff1d6', Fri: '#d6e8ff', Sat: '#e7d6f5', Sun: '#ffd6d6' };
   const dayEmoji = { Mon: '🟨', Tue: '⬜', Wed: '🟩', Thu: '🟧', Fri: '🟦', Sat: '🟪', Sun: '🟥' };
   return (
     <View style={styles.container}>
