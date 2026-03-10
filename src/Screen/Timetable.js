@@ -432,10 +432,6 @@ export default function Timetable() {
               </View>
             )}
 
-            <View style={styles.rowInputs}>
-              <TextInput placeholder="วันที่ (1-31)" value={classDate} onChangeText={setClassDate} keyboardType="number-pad" style={[styles.input, { flex: 1, marginRight: 6 }]} placeholderTextColor="#cca0bb" />
-              <TextInput placeholder="เดือน" value={classMonth} onChangeText={setClassMonth} style={[styles.input, { flex: 1 }]} placeholderTextColor="#cca0bb" />
-            </View>
 
             <View style={styles.rowInputs}>
               <TextInput value={start} onChangeText={setStart} style={[styles.input, { flex: 1, marginRight: 6 }]} />
