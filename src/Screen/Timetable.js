@@ -13,8 +13,6 @@ export default function Timetable(){
   const [room, setRoom] = useState('');
   const [day, setDay] = useState('Mon');
   const [selectedDays, setSelectedDays] = useState(['Mon']);
-  const [classDate, setClassDate] = useState('');
-  const [classMonth, setClassMonth] = useState('');
   const [start, setStart] = useState('09:00');
   const [end, setEnd] = useState('10:00');
 
@@ -37,14 +35,14 @@ export default function Timetable(){
 
   function openAdd(){
     setEditingId(null);
-    setName(''); setCode(''); setRoom(''); setDay('Mon'); setClassDate(''); setClassMonth(''); setStart('09:00'); setEnd('10:00');
+    setName(''); setCode(''); setRoom(''); setDay('Mon'); setStart('09:00'); setEnd('10:00');
     setSelectedDays(['Mon']);
     setModalVisible(true);
   }
 
   function openEdit(item){
     setEditingId(item.id);
-    setName(item.name||''); setCode(item.code||''); setRoom(item.room||''); setDay(item.day||'Mon'); setClassDate(item.classDate||''); setClassMonth(item.classMonth||''); setStart(item.start||'09:00'); setEnd(item.end||'10:00');
+    setName(item.name||''); setCode(item.code||''); setRoom(item.room||''); setDay(item.day||'Mon'); setStart(item.start||'09:00'); setEnd(item.end||'10:00');
     setSelectedDays([item.day || 'Mon']);
     setModalVisible(true);
   }
@@ -88,7 +86,7 @@ export default function Timetable(){
         return Alert.alert('เวลาใช้งานซ้ำ', 'วันเดียวกันไม่สามารถลงเวลาซ้ำกันได้ กรุณาเลือกเวลาใหม่');
       }
 
-      const newList = list.map(it=> it.id===editingId ? {...it, name, code, room, day, classDate, classMonth, start, end} : it);
+      const newList = list.map(it=> it.id===editingId ? {...it, name, code, room, day, start, end} : it);
       saveTimetable(newList);
       setEditingId(null);
       setModalVisible(false);
@@ -109,8 +107,6 @@ export default function Timetable(){
       code,
       room,
       day: selectedDay,
-      classDate,
-      classMonth,
       start,
       end,
     }));
@@ -319,12 +315,6 @@ export default function Timetable(){
                             {it.name} ({it.code})
                           </Text>
 
-                          {(it.classDate || it.classMonth) &&
-                            <Text>
-                              {it.classDate || '-'} / {it.classMonth || '-'}
-                            </Text>
-                          }
-
                           <Text>
                             {it.start} - {it.end} • {it.room}
                           </Text>
@@ -503,22 +493,6 @@ export default function Timetable(){
               </View>
             </View>
           )}
-
-          <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-            <TextInput
-              placeholder="Date (1-31)"
-              value={classDate}
-              onChangeText={setClassDate}
-              keyboardType="number-pad"
-              style={[styles.input,{flex:1,marginRight:6}]}
-            />
-            <TextInput
-              placeholder="Month"
-              value={classMonth}
-              onChangeText={setClassMonth}
-              style={[styles.input,{flex:1}]}
-            />
-          </View>
 
           <View style={{flexDirection:'row',justifyContent:'space-between'}}>
             <TextInput value={start} onChangeText={setStart} style={[styles.input,{flex:1,marginRight:6}]}/>
