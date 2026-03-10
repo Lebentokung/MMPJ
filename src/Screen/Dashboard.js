@@ -402,7 +402,6 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   splitContainer: {
-    flex: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
   },
